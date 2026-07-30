@@ -168,23 +168,24 @@ export function heroHtml(kind, d, wa, look) {
 export function blockHtml(kind, d) {
   const S = d.services || [];
   const n = (i) => String(i + 1).padStart(2, "0");
+  const price = (x) => (x.price ? `<span class="price">${esc(x.price)}</span>` : "");
   if (kind === "rows")
     return `<div class="rows">${S.map((s, i) =>
-      `<div class="row"><span class="num">${n(i)}</span><h3>${esc(s.title)}</h3><p>${esc(s.text)}</p></div>`).join("")}</div>`;
+      `<div class="row"><span class="num">${n(i)}</span><h3>${esc(s.title)}${price(s)}</h3><p>${esc(s.text)}</p></div>`).join("")}</div>`;
   if (kind === "menu")
     return `<dl class="menu">${S.map((s) =>
-      `<div><dt>${esc(s.title)}</dt><dd>${esc(s.text)}</dd></div>`).join("")}</dl>`;
+      `<div><dt>${esc(s.title)}</dt><dd>${esc(s.text)}${s.price ? `<b class="price">${esc(s.price)}</b>` : ""}</dd></div>`).join("")}</dl>`;
   if (kind === "bands")
     return `<div class="bands">${S.map((s, i) =>
-      `<div class="band"><span class="ghost">${n(i)}</span><div><h3>${esc(s.title)}</h3><p>${esc(s.text)}</p></div></div>`).join("")}</div>`;
+      `<div class="band"><span class="ghost">${n(i)}</span><div><h3>${esc(s.title)}${price(s)}</h3><p>${esc(s.text)}</p></div></div>`).join("")}</div>`;
   if (kind === "ticker")
     return `<div class="strip">${S.map((s, i) =>
-      `<article><span class="num">${n(i)}</span><h3>${esc(s.title)}</h3><p>${esc(s.text)}</p></article>`).join("")}</div>`;
+      `<article><span class="num">${n(i)}</span><h3>${esc(s.title)}${price(s)}</h3><p>${esc(s.text)}</p></article>`).join("")}</div>`;
   if (kind === "steps")
     return `<div class="steps">${S.map((s, i) =>
-      `<div class="step"><span class="dot"></span><h3>${esc(s.title)}</h3><p>${esc(s.text)}</p></div>`).join("")}</div>`;
+      `<div class="step"><span class="dot"></span><h3>${esc(s.title)}${price(s)}</h3><p>${esc(s.text)}</p></div>`).join("")}</div>`;
   return `<div class="cols">${S.map((s) =>
-    `<div><h3>${esc(s.title)}</h3><p>${esc(s.text)}</p></div>`).join("")}</div>`;
+    `<div><h3>${esc(s.title)}${price(s)}</h3><p>${esc(s.text)}</p></div>`).join("")}</div>`;
 }
 
 export function proofHtml(kind, d) {
@@ -231,6 +232,32 @@ export function buildSite(d, look, watermark) {
     ? `<div class="mq" aria-hidden="true"><div><span>${strip} — </span><span>${strip} — </span></div></div>`
     : "";
 
+  const hours = (d.hours || []).filter((h) => h && h.days);
+  const hoursBlock = hours.length
+    ? `<dl class="hours">${hours
+        .map((h) => `<div><dt>${esc(h.days)}</dt><dd>${esc(h.time)}</dd></div>`)
+        .join("")}</dl>`
+    : "";
+
+  const faq = (d.faq || []).filter((x) => x && x.q);
+  const faqBlock = faq.length
+    ? `<section class="sFaq" data-rev><h2>${esc(d.faqTitle || "Частые вопросы")}</h2>
+        <div class="faq">${faq
+          .map((x) => `<details><summary>${esc(x.q)}<i></i></summary><p>${esc(x.a)}</p></details>`)
+          .join("")}</div></section>`
+    : "";
+
+  const visitBlock = hours.length
+    ? `<section class="sVisit" data-rev>
+        <div class="visit">
+          <div><h2>${esc(d.visitTitle || "Как нас найти")}</h2>
+            <p class="visitAddr">${esc(d.address)}</p>
+            <a class="mapLink" href="https://2gis.kz/search/${encodeURIComponent(String(d.businessName || "") + " " + String(d.city || ""))}"
+               target="_blank" rel="noreferrer">Открыть в 2ГИС</a></div>
+          ${hoursBlock}
+        </div></section>`
+    : "";
+
   const finalCta = `<section class="sFinal" data-rev>
       <h2 class="bigCta">${esc(d.finalHeadline || "Напишите — ответим сегодня")}</h2>
       <p class="finalSub">${esc(d.address)}</p>
@@ -244,6 +271,8 @@ export function buildSite(d, look, watermark) {
   if (look.swapped) sections.reverse();
   sections.splice(1, 0, statsBand);
   if (photos.length && look.photo !== "cover") sections.splice(1, 0, gallery);
+  if (faqBlock) sections.push(faqBlock);
+  if (visitBlock) sections.push(visitBlock);
   sections.push(finalCta);
 
   const mark = watermark
@@ -370,6 +399,69 @@ footer p{color:var(--mut);font-size:14px}
 .bands .band{flex-direction:column;align-items:flex-start;gap:8px}}
 ${mo.css}
 
+/* цены */
+.price{margin-left:12px;font-family:'${f.b}',sans-serif;font-size:14px;font-weight:600;color:var(--acc);
+  white-space:nowrap;letter-spacing:0}
+.menu .price{display:block;margin:6px 0 0;text-align:right}
+
+/* часы работы и как найти */
+.sVisit{padding:64px 0}
+.visit{display:grid;grid-template-columns:1.1fr .9fr;gap:44px;align-items:start}
+@media (max-width:760px){.visit{grid-template-columns:1fr;gap:26px}}
+.visitAddr{color:var(--mut);font-size:16px;margin-bottom:18px;max-width:34ch}
+.mapLink{color:var(--acc);text-decoration:none;font-weight:600;font-size:15px;border-bottom:1px solid transparent;
+  transition:border-color .2s}
+.mapLink:hover{border-color:var(--acc)}
+.hours{display:grid;gap:0;margin:0}
+.hours>div{display:flex;justify-content:space-between;gap:18px;padding:14px 0;
+  border-top:1px solid color-mix(in srgb,var(--mut) 32%,transparent)}
+.hours>div:last-child{border-bottom:1px solid color-mix(in srgb,var(--mut) 32%,transparent)}
+.hours dt{color:var(--mut);font-size:15px}
+.hours dd{margin:0;font-weight:600;font-size:15px}
+
+/* частые вопросы */
+.sFaq{padding:64px 0}
+.faq{display:grid;gap:0;max-width:840px}
+.faq details{border-top:1px solid color-mix(in srgb,var(--mut) 32%,transparent)}
+.faq details:last-child{border-bottom:1px solid color-mix(in srgb,var(--mut) 32%,transparent)}
+.faq summary{cursor:pointer;list-style:none;padding:22px 0;display:flex;justify-content:space-between;gap:20px;
+  align-items:center;font-family:'${f.d}',serif;font-weight:${f.w};font-size:clamp(17px,2.2vw,21px)}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary i{flex:none;width:16px;height:16px;position:relative;transition:transform .3s cubic-bezier(.2,.7,.2,1)}
+.faq summary i:before,.faq summary i:after{content:"";position:absolute;background:var(--acc);border-radius:2px}
+.faq summary i:before{left:0;top:7px;width:16px;height:2px}
+.faq summary i:after{left:7px;top:0;width:2px;height:16px;transition:opacity .3s}
+.faq details[open] summary i{transform:rotate(180deg)}
+.faq details[open] summary i:after{opacity:0}
+.faq p{color:var(--mut);font-size:15.5px;padding:0 0 24px;max-width:62ch;line-height:1.65;
+  animation:faqIn .45s cubic-bezier(.2,.7,.2,1)}
+@keyframes faqIn{from{opacity:0;transform:translateY(-8px)}}
+
+/* нижняя панель на телефоне */
+.actbar{display:none}
+@media (max-width:600px){
+  .actbar{display:grid;grid-template-columns:1fr 1fr;gap:0;position:fixed;left:0;right:0;bottom:0;z-index:70;
+    border-top:1px solid color-mix(in srgb,var(--mut) 40%,transparent);
+    background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(14px)}
+  .actbar a{padding:17px 10px;text-align:center;text-decoration:none;font-weight:700;font-size:15px;color:var(--ink)}
+  .actbar .actWa{background:#25D366;color:#06251A}
+  .float{display:none}
+  body{padding-bottom:58px}
+}
+
+/* доступность */
+.skip{position:absolute;left:-9999px;top:0;z-index:100;background:var(--acc);color:var(--ctc);padding:12px 20px;
+  border-radius:0 0 var(--r) 0;text-decoration:none;font-weight:600}
+.skip:focus{left:0}
+:focus-visible{outline:3px solid var(--acc);outline-offset:3px}
+
+/* подчёркивание, которое прорисовывается */
+.tel,.mapLink{position:relative}
+.cta{position:relative;overflow:hidden}
+.cta:after{content:"";position:absolute;inset:0;background:color-mix(in srgb,#fff 22%,transparent);
+  transform:translateX(-101%);transition:transform .45s cubic-bezier(.2,.7,.2,1)}
+.cta:hover:after{transform:translateX(101%)}
+
 /* фотографии */
 .hero.cover{position:relative;padding:0;margin:0 calc(50% - 50vw);width:100vw;min-height:min(84vh,720px);
   display:flex;align-items:flex-end;overflow:hidden}
@@ -446,15 +538,22 @@ a,button{transition:transform .2s ease,opacity .2s ease,background .2s ease,colo
   [data-rev]{opacity:1!important;transform:none!important;filter:none!important;clip-path:none!important}}
 </style></head>
 <body>
+<a class="skip" href="#main">К содержанию</a>
 ${mo.html}${mark}
 <div class="w">
 <header><div class="brand">${esc(d.businessName)}</div><a class="tel" href="${wa}" target="_blank" rel="noreferrer">${esc(d.phone)}</a></header>
+<main id="main">
 ${heroHtml(look.hero, d, wa, look)}
 </div>
 ${marquee}
 <div class="w">
 ${sections.join("\n")}
+</main>
 <footer><p>${esc(d.address)}</p><p>${esc(d.businessName)} · ${esc(d.phone)}</p></footer>
+</div>
+<div class="actbar" role="group" aria-label="Связаться">
+  <a href="tel:${esc(String(d.phone || "").replace(/[^\d+]/g, ""))}">Позвонить</a>
+  <a class="actWa" href="${wa}" target="_blank" rel="noreferrer">WhatsApp</a>
 </div>
 <a class="float" href="${wa}" target="_blank" rel="noreferrer" aria-label="Написать в WhatsApp">
 <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.5 14.4c-.3-.2-1.7-.9-2-1-.3-.1-.5-.2-.7.1-.2.3-.7 1-.9 1.2-.2.2-.3.2-.6.1-.3-.2-1.2-.5-2.3-1.4-.9-.8-1.4-1.7-1.6-2-.2-.3 0-.5.1-.6l.5-.5c.1-.2.2-.3.3-.5 0-.2 0-.4-.1-.5l-.9-2.1c-.2-.5-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.4s1 2.8 1.2 3c.1.2 2 3.1 5 4.3.7.3 1.2.5 1.6.6.7.2 1.3.2 1.8.1.6-.1 1.7-.7 1.9-1.4.2-.7.2-1.3.2-1.4-.1-.1-.3-.2-.6-.3z"/><path d="M12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.4 1.3 4.9L2 22l5.3-1.4c1.4.8 3 1.2 4.7 1.2 5.5 0 10-4.5 10-10S17.5 2 12 2zm0 18.2c-1.6 0-3-.4-4.3-1.2l-.3-.2-3.1.8.8-3-.2-.3c-.8-1.3-1.3-2.8-1.3-4.4 0-4.5 3.7-8.2 8.2-8.2s8.2 3.7 8.2 8.2-3.6 8.3-8 8.3z"/></svg>
@@ -521,6 +620,18 @@ ${mo.script ? dotsScript : ""}
     nums.forEach(function(n){ io2.observe(n); });
   }
 })();
+<\/script>
+<script type="application/ld+json">
+${JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "LocalBusiness",
+  name: d.businessName,
+  description: d.heroSub,
+  telephone: d.phone,
+  address: { "@type": "PostalAddress", addressLocality: d.city || "", streetAddress: d.address || "" },
+  openingHours: (d.hours || []).map((h) => `${h.days} ${h.time}`),
+  image: (d.photos || []).length ? "photo" : undefined,
+})}
 <\/script>
 </body></html>`;
 }

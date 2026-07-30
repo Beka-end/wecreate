@@ -171,6 +171,12 @@ const CSS2 = `
 .p-edit{display:grid;gap:6px;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--line)}
 .p-edit .p-label{margin-top:8px;margin-bottom:4px}
 
+/* что внутри */
+.ln-inside{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:0 44px;position:relative;z-index:2}
+.ln-inside>div{padding:26px 0;border-top:1px solid var(--line)}
+.ln-inside h3{font-family:'Playfair Display',serif;font-weight:600;font-size:19px;margin:0 0 8px;color:var(--abyss)}
+.ln-inside p{margin:0;color:var(--dim);font-size:14.5px;line-height:1.6}
+
 /* появление при прокрутке */
 .rev{opacity:0;transform:translateY(24px);transition:opacity .8s cubic-bezier(.2,.7,.2,1),transform .8s cubic-bezier(.2,.7,.2,1)}
 .rev.in{opacity:1;transform:none}
@@ -449,14 +455,16 @@ export default function App() {
 Язык всех текстов: ${lang === "kk" ? "казахский" : "русский"}
 
 Верни ТОЛЬКО JSON без markdown. Поле mood — одно из: тёмный, светлый, премиум, дерзкий, природный, технологичный.
-В stats дай три правдоподобных для такого дела показателя: короткое значение и подпись. Не выдумывай награды и премии.
-{"mood":"","businessName":"","tagline":"до 4 слов","heroHeadline":"до 7 слов, конкретно, без штампов вроде «качество и надёжность»","heroSub":"2 предложения о пользе для клиента","ctaText":"2-3 слова, призыв написать в WhatsApp","servicesTitle":"","services":[{"title":"","text":"одно предложение"},{"title":"","text":""},{"title":"","text":""}],"pointsTitle":"","points":["","",""],"stats":[{"value":"7 лет","label":"на рынке"},{"value":"3 000","label":"клиентов"},{"value":"20 мин","label":"средний визит"}],"finalHeadline":"призыв на 4-6 слов","address":"город и режим работы","phone":""}`;
+В stats дай три правдоподобных показателя: короткое значение и подпись. Не выдумывай награды и премии.
+В faq задай вопросы, которые клиент правда задаёт этому бизнесу: цена, запись, сроки, оплата.
+Цены ставь только там, где они уместны и правдоподобны для города.
+{"mood":"","businessName":"","tagline":"до 4 слов","heroHeadline":"до 7 слов, конкретно, без штампов вроде «качество и надёжность»","heroSub":"2 предложения о пользе для клиента","ctaText":"2-3 слова, призыв написать в WhatsApp","servicesTitle":"","services":[{"title":"","text":"одно предложение","price":"цена или «от 3 000 ₸», пустая строка если цена неуместна"},{"title":"","text":"","price":""},{"title":"","text":"","price":""}],"pointsTitle":"","points":["","",""],"stats":[{"value":"7 лет","label":"на рынке"},{"value":"3 000","label":"клиентов"},{"value":"20 мин","label":"средний визит"}],"finalHeadline":"призыв на 4-6 слов","hours":[{"days":"Пн–Пт","time":"10:00–20:00"},{"days":"Сб–Вс","time":"11:00–18:00"}],"faqTitle":"","faq":[{"q":"вопрос клиента","a":"короткий ответ"},{"q":"","a":""},{"q":"","a":""}],"visitTitle":"","address":"улица и город","city":"","phone":""}`;
     try {
       const parsed = await askAI(prompt);
       setStage(1);
       const m = MOODS[parsed.mood] ? parsed.mood : "светлый";
       setMood(m); setLook(freshLook(m));
-      setData({ ...parsed, phone: parsed.phone || form.phone });
+      setData({ ...parsed, phone: parsed.phone || form.phone, city: parsed.city || form.city });
       setSerial("№ " + Date.now().toString().slice(-6));
       setStage(2);
       try { setHold(await reserveAmount()); } catch (e) { setHold(null); }
@@ -512,6 +520,7 @@ export default function App() {
         <div className="ln-mark" onClick={tapLogo}>WE<em>CREATE</em></div>
         <div className="ln-navR">
           <a href="#how">Как это работает</a>
+          <a href="#inside">Что внутри</a>
           <a href="#price">{PAY.kzt} ₸</a>
           <button className="ln-btn" type="button" onClick={toTool}>Собрать сайт</button>
         </div>
@@ -802,6 +811,26 @@ export default function App() {
           </div>
         </div>
         </div>
+        </div>
+      </section>
+
+      <section className="ln-sec rev" id="inside">
+        <div className="ln-secHead">
+          <p className="ln-tag">что внутри</p>
+          <h2 className="ln-h2">Каждый сайт собран как надо</h2>
+          <p className="ln-hint">Не просто красивая страница — рабочий инструмент, который приводит клиентов.</p>
+        </div>
+        <div className="ln-inside">
+          {[
+            ["Кнопка WhatsApp", "С готовым текстом сообщения. На телефоне — панель звонка внизу экрана."],
+            ["Цены и часы", "Прайс в блоке услуг, расписание по дням и ссылка на 2ГИС."],
+            ["Частые вопросы", "Раскрывающиеся ответы про запись, оплату и сроки."],
+            ["Ваши фотографии", "До трёх снимков: обложка, снимок у заголовка или галерея."],
+            ["Разметка для поиска", "Название, телефон, адрес и часы — в формате, который читает Google."],
+            ["Работает без интернета", "Один файл: фото внутри, ничего не подгружается со стороны."],
+          ].map(([t, p]) => (
+            <div key={t}><h3>{t}</h3><p>{p}</p></div>
+          ))}
         </div>
       </section>
 
