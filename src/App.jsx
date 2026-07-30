@@ -669,17 +669,27 @@ ${JSON.stringify(state)}
   async function publish(codeOverride, slugOverride) {
     const code = codeOverride || myCode;
     if (!code || !data) return;
-    const want = (slugOverride || slug || toSlug(form.name) || "site") + "";
+
+    /* адрес меняем вручную — тогда занятый честно отклоняем;
+       публикуем впервые — свободный подбирается сам */
+    const manual = !!slugOverride;
+    const want = (slugOverride || slug || toSlug(data.businessName || form.name) || "site") + "";
+
     setPubBusy(true); setPubMsg("");
     try {
       let html = buildSite({ ...data, photos }, look, false);
+      let note = "";
       if (html.length > 880000 && photos.length) {
         html = buildSite({ ...data, photos: photos.slice(0, 1) }, look, false);
-        setPubMsg("Фотографии тяжёлые — в опубликованной версии осталась одна. В скачанном файле все.");
+        note = "Фотографии тяжёлые — в опубликованной версии осталась одна.";
       }
-      const r = await publishSite(code, want, html);
+      const r = await publishSite(code, want, html, !manual);
       setSlug(r.slug);
       setLive(window.location.origin + "/s/" + r.slug);
+      if (r.slug !== want) {
+        note = (note ? note + " " : "") + `Адрес «${want}» уже занят, ваш сайт открыт по «${r.slug}» — его можно сменить ниже.`;
+      }
+      setPubMsg(note);
     } catch (e) {
       setPubMsg(e.message);
     }
@@ -1210,7 +1220,11 @@ ${brief_}
                     )}
                   </>
                 )}
-                {pubMsg && <p className="p-note" style={{ color: "var(--coral)" }}>{pubMsg}</p>}
+                {pubMsg && (
+                  <p className="p-note" style={{ color: live ? "var(--dim)" : "var(--coral)", marginTop: 10 }}>
+                    {pubMsg}
+                  </p>
+                )}
               </div>
             )}
 

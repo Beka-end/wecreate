@@ -170,8 +170,26 @@ export default async function handler(req, res) {
       if (!html.startsWith("<!doctype html")) return res.status(400).json({ error: "Страница повреждена" });
       if (html.length > 900000) return res.status(413).json({ error: "Сайт тяжелее 900 КБ — уменьшите число фотографий" });
 
-      const owner = await kvGet("slug:" + slug, null);
-      if (owner && owner !== code) return res.status(409).json({ error: "Такой адрес уже занят, придумайте другой" });
+      /* Если адрес занят: при auto подбираем свободный сами, иначе честно отказываем. */
+      const taken = async (name) => {
+        const o = await kvGet("slug:" + name, null);
+        return o && o !== code;
+      };
+      if (await taken(slug)) {
+        if (!body.auto) return res.status(409).json({ error: "Такой адрес уже занят, придумайте другой" });
+        const base = slug.slice(0, 34);
+        let found = null;
+        for (let i = 2; i <= 20; i++) {
+          const candidate = base + "-" + i;
+          if (!(await taken(candidate))) { found = candidate; break; }
+        }
+        if (!found) {
+          const tail = code.replace(/[^A-Z0-9]/g, "").slice(-4).toLowerCase();
+          const candidate = base + "-" + (tail || Math.random().toString(36).slice(2, 6));
+          found = (await taken(candidate)) ? base + "-" + Math.random().toString(36).slice(2, 7) : candidate;
+        }
+        slug = found;
+      }
 
       const prev = row.slug;
       if (prev && prev !== slug) {
