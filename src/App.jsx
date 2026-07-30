@@ -33,7 +33,7 @@ const CSS2 = `
 
 /* ── Первый экран: текст над водой ─────────────────────────────── */
 .ln-hero{position:relative;min-height:min(96vh,900px);display:flex;flex-direction:column;align-items:center;
-  overflow:hidden;text-align:center;padding:96px 26px 0;
+  overflow:hidden;text-align:center;padding:96px 26px 150px;
   background:linear-gradient(180deg,#FBFDFD 0%,#EEF8F8 34%,#DCF0EE 62%,#CDEAE6 100%)}
 .ln-sunhalo{position:absolute;z-index:1;width:min(900px,120vw);aspect-ratio:1;border-radius:50%;top:-18%;
   left:50%;transform:translateX(-50%);
@@ -59,11 +59,12 @@ const CSS2 = `
 .ln-cta:hover{transform:translateY(-3px);box-shadow:0 22px 50px rgba(47,182,174,.44)}
 .ln-ghost{color:var(--deep);text-decoration:none;font-size:15px;padding:18px 8px;border-bottom:1px solid var(--line2)}
 .ln-ghost:hover{border-color:var(--lagoon)}
-.ln-meta{display:flex;gap:44px;margin-top:52px;flex-wrap:wrap;justify-content:center;padding-bottom:70px}
-.ln-meta div{text-align:center}
-.ln-meta b{display:block;font-family:'Playfair Display',serif;font-weight:600;font-size:28px;margin-bottom:6px;
-  color:var(--abyss)}
-.ln-meta span{font-size:10.5px;text-transform:uppercase;letter-spacing:.16em;color:var(--faint);font-weight:700}
+.ln-meta{display:flex;gap:44px;margin-top:52px;flex-wrap:wrap;justify-content:center}
+.ln-meta div{text-align:center;min-width:120px}
+.ln-meta b{display:block;font-family:'Playfair Display',serif;font-weight:600;font-size:28px;margin-bottom:10px;
+  line-height:1.1;color:var(--abyss)}
+.ln-meta span{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.16em;color:var(--faint);
+  font-weight:700;line-height:1.5;max-width:16ch;margin:0 auto}
 
 /* большое поле ввода */
 .ln-box{margin:38px auto 0;max-width:720px;text-align:left;border-radius:28px;padding:8px;
@@ -163,10 +164,12 @@ const CSS2 = `
 @keyframes hover{50%{transform:translateY(-10px) rotateX(1.2deg)}}
 
 /* значок прокрутки */
-.ln-scroll{position:absolute;bottom:26px;left:50%;translate:-50%;z-index:5;display:flex;flex-direction:column;
-  align-items:center;gap:8px;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);
-  font-weight:700}
-.ln-scroll i{width:1px;height:38px;background:linear-gradient(180deg,var(--lagoon),transparent);
+.ln-scroll{position:absolute;bottom:22px;left:50%;translate:-50%;z-index:5;display:flex;flex-direction:column;
+  align-items:center;gap:10px;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);
+  font-weight:700;pointer-events:none}
+@media (max-height:760px){.ln-scroll{display:none}}
+@media (max-width:640px){.ln-hero{padding-bottom:124px}.ln-meta{gap:26px;margin-top:40px}}
+.ln-scroll i{width:1px;height:34px;background:linear-gradient(180deg,var(--lagoon),transparent);
   animation:drop 2.4s ease-in-out infinite}
 @keyframes drop{0%{transform:scaleY(.2);transform-origin:top}50%{transform:scaleY(1);transform-origin:top}
   51%{transform-origin:bottom}100%{transform:scaleY(.2);transform-origin:bottom}}
