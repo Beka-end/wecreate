@@ -135,10 +135,10 @@ const CSS2 = `
 /* ── Цена ──────────────────────────────────────────────────────── */
 .ln-priceRow{display:grid;grid-template-columns:1fr 1fr;gap:54px;align-items:center;position:relative;z-index:2}
 @media (max-width:800px){.ln-priceRow{grid-template-columns:1fr;gap:34px}}
-.ln-big{font-family:'Playfair Display',serif;font-weight:600;font-size:clamp(62px,10.5vw,120px);line-height:.92;
-  letter-spacing:-.03em;color:var(--abyss)}
-.ln-big small{display:block;font-family:'Manrope',sans-serif;font-size:15px;font-weight:400;color:var(--dim);
-  letter-spacing:0;margin-top:22px;line-height:1.65}
+.ln-big{font-family:'Playfair Display',serif;font-weight:600;color:var(--abyss);line-height:1}
+.ln-num{display:block;font-size:clamp(52px,9.4vw,116px);line-height:1.02;letter-spacing:-.03em;white-space:nowrap}
+.ln-big small{display:block;font-family:'Manrope',sans-serif;font-size:15.5px;font-weight:400;color:var(--dim);
+  letter-spacing:0;margin-top:26px;line-height:1.7;max-width:36ch}
 .ln-inc{list-style:none;padding:0;margin:0;display:grid;gap:16px}
 .ln-inc li{padding-left:32px;position:relative;color:var(--deep);font-size:15.5px;line-height:1.55}
 .ln-inc li:before{content:"";position:absolute;left:0;top:7px;width:16px;height:16px;border-radius:50%;
@@ -1166,13 +1166,16 @@ ${brief_}
           <h2 className="ln-h2">Один платёж, дальше сайт ваш</h2>
         </div>
         <div className="ln-priceRow">
-          <div className="ln-big">{PAY.kzt} ₸<small>один платёж через Kaspi · без подписки</small></div>
+          <div className="ln-big">
+            <span className="ln-num">{PAY.kzt} ₸</span>
+            <small>Один платёж через Kaspi. Без подписки, продлений и скрытых списаний.</small>
+          </div>
           <ul className="ln-inc">
-            <li>Готовая страница одним файлом</li>
-            <li>Кнопка WhatsApp с готовым сообщением</li>
+            <li>Готовая ссылка сразу после оплаты — публиковать ничего не нужно</li>
+            <li>Кнопка WhatsApp с готовым сообщением и панель звонка на телефоне</li>
+            <li>Цены, часы работы, вопросы-ответы и ваши фотографии</li>
             <li>Уникальный дизайн: цвета, шрифты и вёрстка не повторяются</li>
-            <li>Инструкция, как получить ссылку бесплатно</li>
-            <li>Сколько угодно попыток до оплаты</li>
+            <li>Правки в любой момент — вернётесь по номеру заказа</li>
           </ul>
         </div>
       </section>
