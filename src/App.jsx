@@ -177,16 +177,22 @@ const CSS2 = `
 .ln-inside h3{font-family:'Playfair Display',serif;font-weight:600;font-size:19px;margin:0 0 8px;color:var(--abyss)}
 .ln-inside p{margin:0;color:var(--dim);font-size:14.5px;line-height:1.6}
 
-/* переключатель режимов и разбор */
-.p-modes{display:flex;gap:8px;margin-bottom:18px}
-.p-mode{flex:1;border:1px solid var(--line);background:var(--shell);color:var(--dim);padding:11px 4px;
-  border-radius:100px;cursor:pointer;font-size:13px;font-weight:600;transition:all .15s}
-.p-mode[data-on="1"]{background:var(--lagoon);color:#fff;border-color:var(--lagoon)}
-.p-parsed{margin-top:20px;border:1px solid var(--line);border-radius:24px;padding:18px;background:var(--shell)}
-.p-parsedRow{display:flex;justify-content:space-between;gap:12px;padding:7px 0;font-size:13px}
-.p-parsedRow span{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:10px;font-weight:700;
-  padding-top:3px}
-.p-parsedRow b{text-align:right;color:var(--ink);font-weight:600}
+/* чат правок */
+.p-chat{margin-top:22px;border:1px solid var(--line);border-radius:24px;padding:18px;background:var(--shell);
+  box-shadow:0 10px 30px rgba(18,112,126,.07)}
+.p-log{display:grid;gap:8px;margin-bottom:14px;max-height:230px;overflow:auto;padding-right:4px}
+.p-msg{font-size:13.5px;line-height:1.55;padding:10px 14px;border-radius:16px;background:var(--mist);
+  color:var(--deep);max-width:92%;animation:msgIn .35s cubic-bezier(.2,.7,.2,1)}
+.p-msg.me{margin-left:auto;background:var(--lagoon);color:#fff;border-bottom-right-radius:6px}
+.p-msg:not(.me){border-bottom-left-radius:6px}
+.p-think{opacity:.7;font-style:italic}
+@keyframes msgIn{from{opacity:0;transform:translateY(8px)}}
+.p-chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px}
+.p-chip{border:1px solid var(--line2);background:transparent;color:var(--dim);border-radius:100px;
+  padding:7px 14px;font-size:12px;cursor:pointer;transition:all .15s}
+.p-chip:hover:not(:disabled){border-color:var(--lagoon);color:var(--deep);background:#F2FCFB}
+.p-chip:disabled{opacity:.45;cursor:not-allowed}
+.p-fields{margin-top:16px}
 
 /* возврат по заказу */
 .p-return{border:1px dashed var(--line2);border-radius:20px;padding:14px 16px;margin-bottom:20px;background:var(--shell)}
@@ -350,8 +356,6 @@ export default function App() {
     about: "Мужские стрижки и бритьё опасной бритвой. Без записи, три мастера, кофе за счёт заведения.",
     city: "Алматы",
     phone: "+7 700 000-00-00",
-    priceList: "Стрижка — 5 000 ₸\nБритьё опасной бритвой — 4 000 ₸\nБорода — 3 000 ₸",
-    hoursText: "Пн–Пт — 10:00–21:00\nСб–Вс — 11:00–19:00",
   });
   const [stage, setStage] = useState(-1);
   const [data, setData] = useState(null);
@@ -362,6 +366,9 @@ export default function App() {
   const [device, setDevice] = useState("desktop");
   const [lang, setLang] = useState("ru");
   const [mode, setMode] = useState("free");
+  const [chat, setChat] = useState([]);
+  const [ask, setAsk] = useState("");
+  const [thinking, setThinking] = useState(false);
   const [brief, setBrief] = useState(
     "Барбершоп «Пила» в Алматы на Абая 15. Мужские стрижки без записи, три мастера, бритьё опасной бритвой. " +
     "Стрижка 5000, бритьё 4000, борода 3000. Работаем пн-пт с 10 до 21, выходные с 11 до 19. WhatsApp +7 700 000 00 00."
@@ -484,16 +491,73 @@ export default function App() {
       setSerial("заказ " + restore.trim().toUpperCase());
     } catch (e) { setErr(e.message); }
   }
-  /* строки вида «Стрижка — 5 000 ₸» разбираем на пару, время внутри значения не ломаем */
-  function parsePairs(text) {
-    return String(text || "")
-      .split("\n")
-      .map((l) => l.trim())
-      .filter(Boolean)
-      .map((l) => {
-        const m = l.match(/^(.*?)\s[—–-]\s(.*)$/);
-        return m ? { left: m[1].trim(), right: m[2].trim() } : { left: l, right: "" };
-      });
+  /* правка сайта словами: модель возвращает только изменившиеся поля */
+  const LOOK_KEYS = {
+    hero: HEROES, block: BLOCKS, proof: PROOFS, motif: MOTIFS, cta: CTAS,
+    radius: ["0px", "2px", "6px", "14px", "999px"], photo: ["cover", "side", "strip"],
+  };
+
+  async function applyRequest(text) {
+    const q = (text || ask).trim();
+    if (!q || !data) return;
+    setAsk(""); setThinking(true);
+    setChat((c) => [...c, { me: true, text: q }]);
+
+    const state = {
+      data: { ...data, photos: undefined },
+      look: {
+        palette: look.palette, fonts: look.fonts, hero: look.hero, block: look.block,
+        proof: look.proof, motif: look.motif, cta: look.cta, radius: look.radius,
+        upper: look.upper, marquee: look.marquee, photo: look.photo, width: look.width,
+      },
+    };
+
+    const prompt = `Ты правишь готовый сайт малого бизнеса по просьбе владельца.
+
+Текущее состояние:
+${JSON.stringify(state)}
+
+Что можно менять в look:
+- palette: число 0..${PALETTES.length - 1}. Названия по порядку: ${PALETTES.map((x, i) => i + "=" + x.id).join(", ")}
+- fonts: число 0..${FONTS.length - 1}. Пары: ${FONTS.map((x, i) => i + "=" + x.id).join(", ")}
+- hero (первый экран): ${HEROES.join(", ")}
+- block (как показаны услуги): ${BLOCKS.join(", ")}
+- proof (как показаны доводы): ${PROOFS.join(", ")}
+- motif (фоновый декор): ${MOTIFS.join(", ")}
+- cta (форма кнопки): ${CTAS.join(", ")}
+- radius: 0px, 2px, 6px, 14px, 999px
+- upper: true/false — заголовки капслоком
+- marquee: true/false — бегущая строка
+- photo: cover, side, strip — как расположить фотографии
+- width: 760, 1040, 1240, 1440 — ширина страницы
+
+В data можно менять любые тексты: heroHeadline, heroSub, ctaText, tagline, services, points, stats, faq, hours, finalHeadline, address.
+
+Просьба владельца: «${q}»
+
+Верни ТОЛЬКО JSON без markdown:
+{"look":{только изменившиеся ключи},"data":{только изменившиеся поля},"reply":"одно короткое предложение о том, что сделал"}`;
+
+    try {
+      const patch = await askAI(prompt);
+      const nextLook = { ...look };
+      const L = patch.look || {};
+      if (Number.isInteger(L.palette) && L.palette >= 0 && L.palette < PALETTES.length) nextLook.palette = L.palette;
+      if (Number.isInteger(L.fonts) && L.fonts >= 0 && L.fonts < FONTS.length) nextLook.fonts = L.fonts;
+      for (const k of Object.keys(LOOK_KEYS)) if (LOOK_KEYS[k].includes(L[k])) nextLook[k] = L[k];
+      if (typeof L.upper === "boolean") nextLook.upper = L.upper;
+      if (typeof L.marquee === "boolean") nextLook.marquee = L.marquee;
+      if ([760, 1040, 1240, 1440].includes(L.width)) nextLook.width = L.width;
+
+      const nextData = { ...data, ...(patch.data || {}) };
+      setLook(nextLook);
+      setData(nextData);
+      keep(nextData, nextLook);
+      setChat((c) => [...c, { me: false, text: patch.reply || "Готово." }]);
+    } catch (e) {
+      setChat((c) => [...c, { me: false, text: "Не получилось: " + e.message }]);
+    }
+    setThinking(false);
   }
 
   function editField(path, value) {
@@ -509,23 +573,17 @@ export default function App() {
 
   async function generate() {
     setErr(""); setData(null); setStage(0);
-    const brief_ = mode === "free"
-      ? `Вот всё, что рассказал владелец. Разбери это сам: вытащи название, город, адрес, телефон,
+    const brief_ = `Вот всё, что рассказал владелец. Разбери это сам: вытащи название, город, адрес, телефон,
 услуги с ценами и часы работы, ничего не выдумывая сверх сказанного.
 
-«${brief}»`
-      : "";
+«${brief}»`;
 
     const prompt = `Ты копирайтер и арт-директор для сайтов малого бизнеса.
 ${brief_}
 
-${mode === "fields" ? `Бизнес: ${form.name}
-Описание: ${form.about}
-Город: ${form.city}
-Телефон: ${form.phone}` : ""}
+Если чего-то не сказано — не выдумывай, оставь поле пустым.
 Язык всех текстов: ${lang === "kk" ? "казахский" : "русский"}
-${mode === "fields" && parsePairs(form.priceList).length ? "Услуги и цены (взять дословно, ничего не менять и не добавлять):\n" + parsePairs(form.priceList).map((x) => `- ${x.left}${x.right ? " — " + x.right : ""}`).join("\n") : ""}
-${mode === "fields" && parsePairs(form.hoursText).length ? "Часы работы (взять дословно):\n" + parsePairs(form.hoursText).map((x) => `- ${x.left} ${x.right}`).join("\n") : ""}
+
 
 Верни ТОЛЬКО JSON без markdown. Поле mood — одно из: тёмный, светлый, премиум, дерзкий, природный, технологичный.
 В stats дай три правдоподобных показателя: короткое значение и подпись. Не выдумывай награды и премии.
@@ -539,32 +597,15 @@ ${mode === "fields" && parsePairs(form.hoursText).length ? "Часы работ�
       setMood(m); setLook(freshLook(m));
       const merged = { ...parsed, phone: parsed.phone || form.phone, city: parsed.city || form.city };
 
-      /* свободный ввод: показываем в полях то, что распозналось, — можно проверить и поправить */
-      if (mode === "free") {
-        setForm((f) => ({
-          ...f,
-          name: parsed.businessName || f.name,
-          about: brief.slice(0, 400),
-          city: parsed.city || f.city,
-          phone: parsed.phone || f.phone,
-          priceList: (parsed.services || [])
-            .map((x) => (x.price ? `${x.title} — ${x.price}` : x.title))
-            .join("\n"),
-          hoursText: (parsed.hours || []).map((h) => `${h.days} — ${h.time}`).join("\n"),
-        }));
-      }
+      /* распознанное раскладываем по полям — владелец видит и правит */
+      setForm((f) => ({
+        ...f,
+        name: parsed.businessName || f.name,
+        about: brief.slice(0, 400),
+        city: parsed.city || f.city,
+        phone: parsed.phone || f.phone,
+      }));
 
-      /* режим полей: свои цены и часы всегда сильнее того, что придумала модель */
-      const myServices = mode === "fields" ? parsePairs(form.priceList) : [];
-      const myHours = mode === "fields" ? parsePairs(form.hoursText) : [];
-      if (myServices.length) {
-        merged.services = myServices.map((x, i) => ({
-          title: x.left,
-          price: x.right,
-          text: (parsed.services && parsed.services[i] && parsed.services[i].text) || "",
-        }));
-      }
-      if (myHours.length) merged.hours = myHours.map((x) => ({ days: x.left, time: x.right }));
       setData(merged);
       setSerial("№ " + Date.now().toString().slice(-6));
       setStage(2);
@@ -706,70 +747,17 @@ ${mode === "fields" && parsePairs(form.hoursText).length ? "Часы работ�
         </div>
         <div className="p-grid">
           <div className="p-panel">
-            <p className="p-eyebrow">Данные бизнеса</p>
-
-            <div className="p-modes">
-              {[["free", "Одним текстом"], ["fields", "По полям"]].map(([k, t]) => (
-                <button key={k} className="p-mode" type="button" data-on={mode === k ? "1" : "0"}
-                  onClick={() => setMode(k)}>{t}</button>
-              ))}
-            </div>
-
-            {mode === "free" ? (
-              <div className="p-field">
-                <label className="p-label" htmlFor="br">Расскажите о деле как есть</label>
-                <textarea id="br" className="p-area" style={{ minHeight: 150 }} value={brief}
-                  onChange={(e) => setBrief(e.target.value)}
-                  placeholder="Что за бизнес, где, что делаете, цены, часы работы, номер WhatsApp — своими словами, одним куском." />
-                <p className="p-note" style={{ marginTop: 6 }}>
-                  Разберу сам: вытащу название, город, телефон, услуги с ценами и часы. После сборки всё
-                  это появится в полях — проверите и поправите.
-                </p>
-              </div>
-            ) : (
-            <>
-            <div className="p-field">
-              <label className="p-label" htmlFor="n">Название</label>
-              <input id="n" className="p-input" value={form.name} onChange={set("name")} />
-            </div>
-            <div className="p-field">
-              <label className="p-label" htmlFor="a">Чем занимаетесь</label>
-              <textarea id="a" className="p-area" value={form.about} onChange={set("about")} />
-            </div>
-            <div className="p-field">
-              <label className="p-label" htmlFor="c">Город</label>
-              <input id="c" className="p-input" value={form.city} onChange={set("city")} />
-            </div>
-            <div className="p-field">
-              <label className="p-label" htmlFor="t">Телефон WhatsApp</label>
-              <input id="t" className="p-input" value={form.phone} onChange={set("phone")} />
-            </div>
-
-            <div className="p-return">
-              <span>Уже покупали сайт?</span>
-              <div className="p-row" style={{ marginTop: 8 }}>
-                <input className="p-input" placeholder="Номер заказа" value={restore}
-                  onChange={(e) => setRestore(e.target.value)} aria-label="Номер заказа" />
-                <button className="p-mini" type="button" onClick={openOrder}>Открыть</button>
-              </div>
-            </div>
+            <p className="p-eyebrow">Опишите, какой сайт нужен</p>
 
             <div className="p-field">
-              <label className="p-label" htmlFor="pl">Услуги и цены · по строке на услугу</label>
-              <textarea id="pl" className="p-area" value={form.priceList} onChange={set("priceList")}
-                placeholder={"Стрижка — 5 000 ₸\nБритьё — 4 000 ₸"} />
+              <textarea id="br" className="p-area" style={{ minHeight: 168 }} value={brief}
+                onChange={(e) => setBrief(e.target.value)} aria-label="Описание сайта"
+                placeholder="Например: барбершоп «Пила» в Алматы на Абая 15, мужские стрижки без записи, стрижка 5000, бритьё 4000, работаем с 10 до 21, WhatsApp +7 700 000 00 00" />
               <p className="p-note" style={{ marginTop: 6 }}>
-                Название, тире, цена. Описание к каждой услуге напишет ИИ, а название и цену возьмёт как есть.
+                Пишите как рассказали бы знакомому. Название, город, услуги, цены, часы и номер —
+                всё, что упомянете, попадёт на сайт.
               </p>
             </div>
-
-            <div className="p-field">
-              <label className="p-label" htmlFor="hr">Часы работы</label>
-              <textarea id="hr" className="p-area" style={{ minHeight: 68 }} value={form.hoursText}
-                onChange={set("hoursText")} placeholder={"Пн–Пт — 10:00–21:00\nСб–Вс — 11:00–19:00"} />
-            </div>
-            </>
-            )}
 
             <div className="p-field">
               <span className="p-label">Язык сайта</span>
@@ -805,19 +793,62 @@ ${mode === "fields" && parsePairs(form.hoursText).length ? "Часы работ�
             </div>
 
             <button className="p-go" type="button" onClick={generate} disabled={busy}>
-              {busy ? "Собираем…" : data ? "Собрать заново" : "Собрать сайт бесплатно"}
+              {busy ? "Собираем…" : data ? "Собрать заново" : "Создать сайт"}
             </button>
 
-            {data && mode === "free" && (
-              <div className="p-parsed">
-                <p className="p-eyebrow" style={{ margin: "0 0 10px" }}>что распозналось</p>
-                <div className="p-parsedRow"><span>название</span><b>{form.name}</b></div>
-                <div className="p-parsedRow"><span>город</span><b>{form.city}</b></div>
-                <div className="p-parsedRow"><span>телефон</span><b>{form.phone}</b></div>
-                <div className="p-parsedRow"><span>услуг</span><b>{(data.services || []).length}</b></div>
-                <div className="p-parsedRow"><span>часы</span><b>{(data.hours || []).length ? "есть" : "нет"}</b></div>
-                <button className="p-mini" style={{ width: "100%", padding: "10px 0", marginTop: 12 }}
-                  type="button" onClick={() => setMode("fields")}>Открыть поля и поправить</button>
+            {data && (
+              <div className="p-chat">
+                <p className="p-eyebrow" style={{ margin: "0 0 12px" }}>что поправить</p>
+
+                {chat.length > 0 && (
+                  <div className="p-log">
+                    {chat.map((m, i) => (
+                      <div key={i} className={m.me ? "p-msg me" : "p-msg"}>{m.text}</div>
+                    ))}
+                    {thinking && <div className="p-msg p-think">думаю…</div>}
+                  </div>
+                )}
+
+                <div className="p-chips">
+                  {["сделай темнее", "другие шрифты", "услуги списком", "добавь бегущую строку",
+                    "заголовок короче", "убери фон"].map((c) => (
+                    <button key={c} className="p-chip" type="button" disabled={thinking}
+                      onClick={() => applyRequest(c)}>{c}</button>
+                  ))}
+                </div>
+
+                <div className="p-row">
+                  <input className="p-input" placeholder="Напишите, что изменить" value={ask}
+                    onChange={(e) => setAsk(e.target.value)} disabled={thinking}
+                    onKeyDown={(e) => { if (e.key === "Enter") applyRequest(); }} aria-label="Что изменить" />
+                  <button className="p-mini" type="button" onClick={() => applyRequest()} disabled={thinking || !ask.trim()}>
+                    Применить
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {data && (
+              <div className="p-fields">
+                <button className="p-mini" style={{ width: "100%", padding: "11px 0" }}
+                  type="button" onClick={() => setMode(mode === "fields" ? "free" : "fields")}>
+                  {mode === "fields" ? "Свернуть поля" : "Поправить поля вручную"}
+                </button>
+
+                {mode === "fields" && (
+                  <div className="p-edit" style={{ marginTop: 14 }}>
+                    <label className="p-label">Название</label>
+                    <input className="p-input" value={form.name} onChange={set("name")} />
+                    <label className="p-label">Город</label>
+                    <input className="p-input" value={form.city} onChange={set("city")} />
+                    <label className="p-label">Телефон WhatsApp</label>
+                    <input className="p-input" value={form.phone}
+                      onChange={(e) => { set("phone")(e); editField(["phone"], e.target.value); }} />
+                    <p className="p-note" style={{ margin: "10px 0 0" }}>
+                      Услуги, цены, часы и тексты — ниже, в блоке «Править тексты».
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
