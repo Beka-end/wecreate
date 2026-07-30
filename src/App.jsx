@@ -215,6 +215,20 @@ const CSS2 = `
 .p-chip:disabled{opacity:.45;cursor:not-allowed}
 .p-fields{margin-top:16px}
 
+/* номер заказа крупно */
+.p-codeBox{margin-top:14px;padding:18px;border-radius:22px;background:var(--shell);
+  border:1.5px dashed var(--lagoon);text-align:center}
+.p-codeLabel{display:block;font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);
+  font-weight:700;margin-bottom:10px}
+.p-codeVal{display:block;font-family:'JetBrains Mono','SF Mono',ui-monospace,monospace;
+  font-size:clamp(22px,4.6vw,30px);letter-spacing:.1em;color:var(--abyss);font-weight:700;
+  word-break:break-all;line-height:1.25;user-select:all}
+.p-codeCopy{margin-top:14px;width:100%;border:none;border-radius:100px;padding:13px;cursor:pointer;color:#fff;
+  font-weight:700;font-size:14.5px;background:linear-gradient(115deg,var(--lagoon),#3FD0C0);
+  box-shadow:0 8px 22px rgba(47,182,174,.3);transition:transform .18s}
+.p-codeCopy:hover{transform:translateY(-2px)}
+.p-codeWarn{display:block;margin-top:12px;font-size:12.5px;line-height:1.6;color:var(--coral);font-weight:600}
+
 /* живая ссылка */
 .p-live{display:block;font-family:'Playfair Display',serif;font-size:clamp(17px,2.4vw,23px);color:var(--deep);
   text-decoration:none;padding:14px 18px;border-radius:18px;background:#EDFAF9;
@@ -709,8 +723,16 @@ ${brief_}
     a.href = url; a.download = "index.html"; a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
+  const [copied, setCopied] = useState("");
   function copy(text) {
-    if (navigator.clipboard) navigator.clipboard.writeText(text).catch(() => {});
+    const done = () => { setCopied(text); setTimeout(() => setCopied(""), 1800); };
+    if (navigator.clipboard) navigator.clipboard.writeText(text).then(done).catch(() => {});
+    else {
+      const el = document.createElement("textarea");
+      el.value = text; document.body.appendChild(el); el.select();
+      try { document.execCommand("copy"); done(); } catch (e) {}
+      document.body.removeChild(el);
+    }
   }
   const toTool = () => document.getElementById("tool")?.scrollIntoView({ behavior: "smooth", block: "start" });
   function startFromHero() {
@@ -1047,9 +1069,15 @@ ${brief_}
                     <b>оплата на проверке</b>
                     Принято: <b>{req.amount} ₸</b> от {req.sender}. Сверят сумму и имя — и доступ
                     откроется сам, страницу можно не закрывать.
-                    <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(201,162,39,.3)" }}>
-                      Номер заказа <b style={{ fontFamily: "'JetBrains Mono',monospace" }}>{req.code}</b> — запишите
-                      на случай, если закроете страницу. Он заработает как код доступа после подтверждения оплаты.
+                    <div className="p-codeBox">
+                      <span className="p-codeLabel">Ваш номер заказа</span>
+                      <b className="p-codeVal">{req.code}</b>
+                      <button className="p-codeCopy" type="button" onClick={() => copy(req.code)}>
+                        {copied === req.code ? "✓ скопировано" : "Скопировать"}
+                      </button>
+                      <span className="p-codeWarn">
+                        Обязательно скопируйте — без него не вернуться к своему сайту, если закроете страницу.
+                      </span>
                     </div>
                   </div>
                 )}
@@ -1066,10 +1094,17 @@ ${brief_}
               <div className="p-saved">
                 <p className="p-ok">✓ оплачено · сайт ваш</p>
                 {myCode && (
-                  <p className="p-note" style={{ marginTop: 8 }}>
-                    Номер заказа <b>{myCode}</b> — сохраните. По нему вернётесь сюда, поменяете цены
-                    или часы работы и скачаете обновлённый сайт бесплатно.
-                  </p>
+                  <div className="p-codeBox">
+                    <span className="p-codeLabel">Ваш номер заказа</span>
+                    <b className="p-codeVal">{myCode}</b>
+                    <button className="p-codeCopy" type="button" onClick={() => copy(myCode)}>
+                      {copied === myCode ? "✓ скопировано" : "Скопировать"}
+                    </button>
+                    <span className="p-codeWarn">
+                      Скопируйте и сохраните. По нему вернётесь сюда, поменяете цены или часы
+                      и обновите сайт бесплатно. Другого способа вернуться нет.
+                    </span>
+                  </div>
                 )}
               </div>
             )}
