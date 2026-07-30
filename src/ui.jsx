@@ -324,6 +324,69 @@ export function Hero3D() {
       glints.push(s);
     }
 
+    /* Парящие страницы: на каждой нарисован макет сайта.
+       Под водой — перевёрнутый двойник, он и работает отражением. */
+    function pageTexture(i) {
+      const c = document.createElement("canvas");
+      c.width = 512; c.height = 660;
+      const x = c.getContext("2d");
+      const [ink, acc, bg] = [
+        ["#0E3A46", "#2FB6AE", "#F6FBFA"],
+        ["#123A2E", "#5FBF8A", "#F7FBF8"],
+        ["#2A1E3E", "#9B8CFF", "#FAF8FF"],
+        ["#3A2418", "#FF8A5C", "#FFF9F4"],
+        ["#10333B", "#E0A63C", "#FBFDFD"],
+      ][i % 5];
+
+      x.fillStyle = bg; x.fillRect(0, 0, 512, 660);
+      // шапка
+      x.fillStyle = ink; x.globalAlpha = .9;
+      x.fillRect(38, 40, 120, 16);
+      x.globalAlpha = .35; x.fillRect(360, 42, 112, 12);
+      // крупный заголовок
+      x.globalAlpha = .92;
+      x.fillRect(38, 130, 400, 34);
+      x.fillRect(38, 180, 300, 34);
+      // подзаголовок
+      x.globalAlpha = .3;
+      x.fillRect(38, 244, 340, 12);
+      x.fillRect(38, 268, 250, 12);
+      // кнопка
+      x.globalAlpha = 1; x.fillStyle = acc;
+      x.beginPath(); x.roundRect ? x.roundRect(38, 312, 180, 46, 23) : x.rect(38, 312, 180, 46); x.fill();
+      // карточки
+      x.fillStyle = ink; x.globalAlpha = .12;
+      for (let k = 0; k < 3; k++) x.fillRect(38, 420 + k * 74, 436, 56);
+      x.globalAlpha = 1;
+      return new THREE.CanvasTexture(c);
+    }
+
+    const sheets = [];
+    const sheetGeo = new THREE.PlaneGeometry(3.1, 4.0, 1, 1);
+    for (let i = 0; i < 5; i++) {
+      const tex = pageTexture(i);
+      const mat = new THREE.MeshStandardMaterial({
+        map: tex, roughness: 0.22, metalness: 0.12, transparent: true, opacity: 0.96, side: THREE.DoubleSide,
+        envMap: sky, envMapIntensity: 0.55,
+      });
+      const m = new THREE.Mesh(sheetGeo, mat);
+      const a = (i / 5) * Math.PI * 2;
+      m.position.set(Math.cos(a) * 7.5 + (Math.random() - 0.5) * 2, 2.6 + Math.random() * 2.4, -14 + Math.sin(a) * 6);
+      m.rotation.set(-0.12, -a * 0.5 + 0.3, (i % 2 ? 1 : -1) * 0.06);
+      m.userData = { base: m.position.y, phase: Math.random() * 6.28, spin: (Math.random() - 0.5) * 0.14 };
+      scene.add(m);
+
+      // отражение: тот же лист вверх ногами, приглушённый
+      const r = new THREE.Mesh(
+        sheetGeo,
+        new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0.16, side: THREE.DoubleSide })
+      );
+      r.scale.y = -1;
+      scene.add(r);
+      m.userData.mirror = r;
+      sheets.push(m);
+    }
+
     /* дымка у горизонта */
     const haze = new THREE.Mesh(
       new THREE.PlaneGeometry(420, 40),
@@ -371,6 +434,17 @@ export function Hero3D() {
         const k = Math.pow(Math.abs(Math.sin(t * u.speed * 0.5 + u.phase)), 3);
         s.material.opacity = 0.1 + k * 0.85;
         s.scale.set(u.w * (1.1 + k * 1.5), u.w * 0.24 * (0.8 + k * 0.5), 1);
+      });
+
+      sheets.forEach((m, i) => {
+        const u = m.userData;
+        m.position.y = u.base + Math.sin(t * 0.5 + u.phase) * 0.34;
+        m.rotation.y += u.spin * 0.004;
+        m.rotation.z = Math.sin(t * 0.35 + u.phase) * 0.05;
+        const r = u.mirror;
+        r.position.set(m.position.x, -m.position.y * 0.92, m.position.z);
+        r.rotation.set(m.rotation.x, m.rotation.y, -m.rotation.z);
+        r.material.opacity = 0.14 + Math.sin(t * 0.6 + u.phase) * 0.04;
       });
 
       camera.position.x += (mx * 1.8 - camera.position.x) * 0.028;

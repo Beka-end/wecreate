@@ -65,6 +65,24 @@ const CSS2 = `
   color:var(--abyss)}
 .ln-meta span{font-size:10.5px;text-transform:uppercase;letter-spacing:.16em;color:var(--faint);font-weight:700}
 
+/* большое поле ввода */
+.ln-box{margin:38px auto 0;max-width:720px;text-align:left;border-radius:28px;padding:8px;
+  background:rgba(255,255,255,.72);backdrop-filter:blur(18px) saturate(1.3);
+  border:1px solid rgba(255,255,255,.9);
+  box-shadow:0 30px 80px rgba(18,112,126,.22),0 2px 0 rgba(255,255,255,.9) inset;
+  transition:box-shadow .3s,transform .3s}
+.ln-box:focus-within{box-shadow:0 38px 96px rgba(18,112,126,.28),0 0 0 4px rgba(47,182,174,.22);transform:translateY(-2px)}
+.ln-prompt{width:100%;border:0;outline:0;resize:none;background:transparent;color:var(--ink);
+  font-family:'Manrope',sans-serif;font-size:16.5px;line-height:1.6;padding:18px 20px 8px}
+.ln-prompt::placeholder{color:var(--faint)}
+.ln-boxFoot{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:6px 8px 8px 20px;
+  flex-wrap:wrap}
+.ln-boxHint{font-size:12.5px;color:var(--faint);max-width:38ch}
+.ln-box .ln-cta{padding:15px 30px;font-size:15px}
+@media (max-width:560px){.ln-boxFoot{flex-direction:column;align-items:stretch}
+  .ln-box .ln-cta{width:100%}.ln-boxHint{text-align:center}}
+.ln-ghost{display:inline-block;margin-top:24px}
+
 /* ── Секции ────────────────────────────────────────────────────── */
 .ln-sec{padding:96px 34px;max-width:1220px;margin:0 auto;position:relative}
 .ln-sec+.ln-sec{border-top:1px solid var(--line)}
@@ -645,6 +663,11 @@ ${brief_}
     if (navigator.clipboard) navigator.clipboard.writeText(text).catch(() => {});
   }
   const toTool = () => document.getElementById("tool")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  function startFromHero() {
+    if (!brief.trim() || busy) return;
+    toTool();
+    setTimeout(generate, 420);
+  }
 
   if (admin)
     return (
@@ -682,10 +705,19 @@ ${brief_}
             Опишите бизнес тремя строчками. Тексты, шрифты, цвета и вёрстка подберутся сами —
             получите живую страницу с кнопкой WhatsApp. Платите, только если забираете.
           </p>
-          <div className="ln-acts">
-            <button className="ln-cta" type="button" onClick={toTool}>Собрать сайт</button>
-            <a className="ln-ghost" href="#how">Как это работает</a>
+          <div className="ln-box">
+            <textarea className="ln-prompt" value={brief} onChange={(e) => setBrief(e.target.value)}
+              aria-label="Опишите, какой сайт нужен" rows={3}
+              placeholder="Барбершоп «Пила» в Алматы на Абая 15, стрижка 5 000 ₸, бритьё 4 000 ₸, с 10 до 21, WhatsApp +7 700 000 00 00"
+              onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) startFromHero(); }} />
+            <div className="ln-boxFoot">
+              <span className="ln-boxHint">Пишите своими словами — всё, что упомянете, попадёт на сайт</span>
+              <button className="ln-cta" type="button" onClick={startFromHero} disabled={busy}>
+                {busy ? "Собираем…" : "Создать сайт"}
+              </button>
+            </div>
           </div>
+          <a className="ln-ghost" href="#how">Как это работает</a>
           <div className="ln-meta">
             <div><b><CountUp to={20} suffix=" сек" /></b><span>до готовой страницы</span></div>
             <div><b><CountUp to={PAY.kzt} suffix=" ₸" /></b><span>один раз, без подписки</span></div>

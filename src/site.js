@@ -484,6 +484,19 @@ ${mo.css}
 .shots img{width:100%;height:100%;object-fit:cover;display:block;transition:transform 1.1s cubic-bezier(.2,.7,.2,1)}
 .shots figure:hover img{transform:scale(1.06)}
 
+/* страница проявляется целиком, а не мигает */
+body{opacity:0;transition:opacity .7s ease}
+body.ready{opacity:1}
+
+/* полоса прочтения сверху */
+.prog{position:fixed;top:0;left:0;height:3px;width:0;z-index:90;
+  background:linear-gradient(90deg,var(--acc),color-mix(in srgb,var(--acc) 40%,#fff));
+  transition:width .12s linear}
+
+/* фотографии проявляются из размытия */
+img{opacity:0;filter:blur(12px);transition:opacity .8s ease,filter .8s ease}
+img.shown{opacity:1;filter:none}
+
 /* появление при прокрутке */
 [data-rev]{opacity:0;transition:opacity .9s cubic-bezier(.2,.7,.2,1),transform .9s cubic-bezier(.2,.7,.2,1),filter .9s}
 [data-rev].up{transform:translateY(38px)}
@@ -539,6 +552,7 @@ a,button{transition:transform .2s ease,opacity .2s ease,background .2s ease,colo
 </style></head>
 <body>
 <a class="skip" href="#main">К содержанию</a>
+<div class="prog" aria-hidden="true"></div>
 ${mo.html}${mark}
 <div class="w">
 <header><div class="brand">${esc(d.businessName)}</div><a class="tel" href="${wa}" target="_blank" rel="noreferrer">${esc(d.phone)}</a></header>
@@ -564,6 +578,18 @@ ${mo.script ? dotsScript : ""}
   var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   var revealKind = '${look.reveal}';
 
+  /* страница показывается, когда шрифты и картинки готовы */
+  var show = function(){ document.body.classList.add('ready'); };
+  if (document.fonts && document.fonts.ready) { document.fonts.ready.then(show); setTimeout(show, 1200); }
+  else { addEventListener('load', show); setTimeout(show, 800); }
+
+  /* фото проявляются по мере загрузки */
+  Array.prototype.forEach.call(document.images, function(im){
+    if (im.complete) im.classList.add('shown');
+    else im.addEventListener('load', function(){ im.classList.add('shown'); });
+    im.addEventListener('error', function(){ im.classList.add('shown'); });
+  });
+
   /* появление секций и ступенчатый выход карточек */
   var items = document.querySelectorAll('[data-rev]');
   items.forEach(function(el){ el.classList.add(revealKind); });
@@ -584,8 +610,13 @@ ${mo.script ? dotsScript : ""}
 
   /* шапка ужимается при прокрутке */
   var head = document.querySelector('header');
+  var prog = document.querySelector('.prog');
   var onScroll = function(){
     if (head) head.classList.toggle('stuck', window.scrollY > 40);
+    if (prog) {
+      var h = document.documentElement.scrollHeight - innerHeight;
+      prog.style.width = (h > 0 ? (scrollY / h) * 100 : 0) + '%';
+    }
     if (!reduce) {
       var par = document.querySelectorAll('[data-par]');
       par.forEach(function(el){
