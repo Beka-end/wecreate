@@ -153,6 +153,24 @@ const CSS2 = `
 @keyframes drop{0%{transform:scaleY(.2);transform-origin:top}50%{transform:scaleY(1);transform-origin:top}
   51%{transform-origin:bottom}100%{transform:scaleY(.2);transform-origin:bottom}}
 
+/* язык, фото и правка текстов */
+.p-langs{display:flex;gap:8px}
+.p-lang{flex:1;border:1px solid var(--line);background:var(--shell);color:var(--dim);padding:11px 4px;
+  border-radius:100px;cursor:pointer;font-size:13px;font-weight:600;transition:all .15s}
+.p-lang[data-on="1"]{background:var(--deep);color:#fff;border-color:var(--deep)}
+.p-shots{display:flex;gap:9px;flex-wrap:wrap}
+.p-shot{position:relative;width:74px;height:74px;border-radius:16px;overflow:hidden;border:1px solid var(--line)}
+.p-shot img{width:100%;height:100%;object-fit:cover;display:block}
+.p-shot button{position:absolute;top:3px;right:3px;width:22px;height:22px;border-radius:50%;border:none;
+  background:rgba(16,51,59,.72);color:#fff;cursor:pointer;font-size:15px;line-height:1;display:flex;
+  align-items:center;justify-content:center}
+.p-shotAdd{width:74px;height:74px;border-radius:16px;border:1.5px dashed var(--line2);display:flex;
+  align-items:center;justify-content:center;font-size:26px;color:var(--faint);cursor:pointer;
+  background:var(--shell);transition:all .15s}
+.p-shotAdd:hover{border-color:var(--lagoon);color:var(--lagoon)}
+.p-edit{display:grid;gap:6px;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+.p-edit .p-label{margin-top:8px;margin-bottom:4px}
+
 /* появление при прокрутке */
 .rev{opacity:0;transform:translateY(24px);transition:opacity .8s cubic-bezier(.2,.7,.2,1),transform .8s cubic-bezier(.2,.7,.2,1)}
 .rev.in{opacity:1;transform:none}
@@ -317,6 +335,9 @@ export default function App() {
   const [serial, setSerial] = useState("");
   const [err, setErr] = useState("");
   const [device, setDevice] = useState("desktop");
+  const [lang, setLang] = useState("ru");
+  const [photos, setPhotos] = useState([]);
+  const [editing, setEditing] = useState(false);
 
   const [sender, setSender] = useState("");
   const [hold, setHold] = useState(null);   // бронь: {code, amount}
@@ -379,7 +400,43 @@ export default function App() {
     if (clicks.current.n >= 5) { clicks.current.n = 0; window.location.hash = "kabinet"; }
   }
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
-  const preview = data ? buildSite(data, look, !paid) : "";
+  const preview = data ? buildSite({ ...data, photos }, look, !paid) : "";
+
+  /* фотографии ужимаем прямо в браузере и вшиваем в файл — сайт работает без интернета */
+  async function addPhotos(files) {
+    const list = Array.from(files).slice(0, 3 - photos.length);
+    const done = [];
+    for (const file of list) {
+      if (!file.type.startsWith("image/")) continue;
+      const url = await new Promise((res) => {
+        const img = new Image();
+        const fr = new FileReader();
+        fr.onload = () => { img.src = fr.result; };
+        img.onload = () => {
+          const max = 1400;
+          const k = Math.min(max / img.width, max / img.height, 1);
+          const c = document.createElement("canvas");
+          c.width = Math.round(img.width * k);
+          c.height = Math.round(img.height * k);
+          c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+          res(c.toDataURL("image/jpeg", 0.82));
+        };
+        img.onerror = () => res(null);
+        fr.readAsDataURL(file);
+      });
+      if (url) done.push(url);
+    }
+    setPhotos((p) => [...p, ...done].slice(0, 3));
+  }
+  function editField(path, value) {
+    setData((d) => {
+      const next = JSON.parse(JSON.stringify(d));
+      if (path.length === 1) next[path[0]] = value;
+      else if (path.length === 3) next[path[0]][path[1]][path[2]] = value;
+      else next[path[0]][path[1]] = value;
+      return next;
+    });
+  }
 
   async function generate() {
     setErr(""); setData(null); setStage(0);
@@ -389,6 +446,7 @@ export default function App() {
 Описание: ${form.about}
 Город: ${form.city}
 Телефон: ${form.phone}
+Язык всех текстов: ${lang === "kk" ? "казахский" : "русский"}
 
 Верни ТОЛЬКО JSON без markdown. Поле mood — одно из: тёмный, светлый, премиум, дерзкий, природный, технологичный.
 В stats дай три правдоподобных для такого дела показателя: короткое значение и подпись. Не выдумывай награды и премии.
@@ -426,7 +484,7 @@ export default function App() {
   }
 
   function download() {
-    const blob = new Blob([buildSite(data, look, false)], { type: "text/html" });
+    const blob = new Blob([buildSite({ ...data, photos }, look, false)], { type: "text/html" });
     const url = URL.createObjectURL(blob);
     const a = linkRef.current;
     a.href = url; a.download = "index.html"; a.click();
@@ -555,12 +613,74 @@ export default function App() {
               <input id="t" className="p-input" value={form.phone} onChange={set("phone")} />
             </div>
 
+            <div className="p-field">
+              <span className="p-label">Язык сайта</span>
+              <div className="p-langs">
+                {[["ru", "Русский"], ["kk", "Қазақша"]].map(([k, t]) => (
+                  <button key={k} className="p-lang" type="button" data-on={lang === k ? "1" : "0"}
+                    onClick={() => setLang(k)}>{t}</button>
+                ))}
+              </div>
+            </div>
+
+            <div className="p-field">
+              <span className="p-label">Фотографии · до трёх</span>
+              <div className="p-shots">
+                {photos.map((src, i) => (
+                  <div className="p-shot" key={i}>
+                    <img src={src} alt="" />
+                    <button type="button" onClick={() => setPhotos(photos.filter((_, j) => j !== i))}
+                      aria-label="Убрать фото">×</button>
+                  </div>
+                ))}
+                {photos.length < 3 && (
+                  <label className="p-shotAdd">
+                    +
+                    <input type="file" accept="image/*" multiple hidden
+                      onChange={(e) => { addPhotos(e.target.files); e.target.value = ""; }} />
+                  </label>
+                )}
+              </div>
+              <p className="p-note" style={{ marginTop: 8 }}>
+                Живые снимки поднимают доверие сильнее любого текста. Ужимаются прямо здесь и вшиваются в файл.
+              </p>
+            </div>
+
             <button className="p-go" type="button" onClick={generate} disabled={busy}>
               {busy ? "Собираем…" : data ? "Собрать заново" : "Собрать сайт бесплатно"}
             </button>
 
             {data && (
               <div className="p-look">
+                <button className="p-mini" style={{ width: "100%", padding: "11px 0", marginBottom: 14 }}
+                  type="button" onClick={() => setEditing(!editing)}>
+                  {editing ? "Свернуть тексты" : "Править тексты вручную"}
+                </button>
+                {editing && (
+                  <div className="p-edit">
+                    <label className="p-label">Заголовок</label>
+                    <textarea className="p-area" style={{ minHeight: 60 }} value={data.heroHeadline}
+                      onChange={(e) => editField(["heroHeadline"], e.target.value)} />
+                    <label className="p-label">Подзаголовок</label>
+                    <textarea className="p-area" style={{ minHeight: 72 }} value={data.heroSub}
+                      onChange={(e) => editField(["heroSub"], e.target.value)} />
+                    <label className="p-label">Кнопка</label>
+                    <input className="p-input" value={data.ctaText}
+                      onChange={(e) => editField(["ctaText"], e.target.value)} />
+                    <label className="p-label">Услуги</label>
+                    {(data.services || []).map((sv, i) => (
+                      <div key={i} style={{ marginBottom: 10 }}>
+                        <input className="p-input" value={sv.title} style={{ marginBottom: 6 }}
+                          onChange={(e) => editField(["services", i, "title"], e.target.value)} />
+                        <input className="p-input" value={sv.text}
+                          onChange={(e) => editField(["services", i, "text"], e.target.value)} />
+                      </div>
+                    ))}
+                    <label className="p-label">Адрес и часы</label>
+                    <input className="p-input" value={data.address}
+                      onChange={(e) => editField(["address"], e.target.value)} />
+                  </div>
+                )}
                 <p className="p-eyebrow" style={{ margin: 0 }}>Вид · настроение «{mood}»</p>
                 <dl className="p-tokens">
                   <div><dt>палитра</dt><dd>{PALETTES[look.palette].id}</dd></div>

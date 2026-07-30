@@ -60,6 +60,7 @@ export function rollLook(mood, avoid) {
       radius: pick(["0px", "2px", "6px", "14px", "999px"]),
       reveal: pick(["up", "left", "scale", "clip", "blur"]),
       marquee: Math.random() < 0.45,
+      photo: pick(["cover", "side", "strip"]),
       upper: Math.random() < 0.35,
       swapped: Math.random() < 0.35,
     };
@@ -132,13 +133,23 @@ var t=0;function draw(){t+=reduce?0:0.0022;x.clearRect(0,0,W,H);
  x.globalAlpha=1;requestAnimationFrame(draw);}draw();})();<\/script>`;
 
 /* ─── Секции ───────────────────────────────────────────────────────── */
-export function heroHtml(kind, d, wa) {
+export function heroHtml(kind, d, wa, look) {
+  const photos = (d.photos || []).filter(Boolean);
+  const cover = photos.length && look && look.photo === "cover" ? photos[0] : null;
+  const side = photos.length && look && look.photo === "side" ? photos[0] : null;
   const eb = `<span class="eyebrow">${esc(d.tagline)}</span>`;
   const h1 = `<h1>${esc(d.heroHeadline)}</h1>`;
   const lead = `<p class="lead">${esc(d.heroSub)}</p>`;
   const cta = `<a class="cta" href="${wa}" target="_blank" rel="noreferrer">${esc(d.ctaText)}</a>`;
   const strip = (d.services || []).map((s) => esc(s.title)).join(" ✦ ");
 
+  if (cover)
+    return `<div class="hero cover">
+      <div class="coverImg"><img src="${cover}" alt="" data-par="0.05"><span class="coverVeil"></span></div>
+      <div class="coverText">${eb}${h1}${lead}${cta}</div></div>`;
+  if (side)
+    return `<div class="hero withShot"><div>${eb}${h1}${lead}${cta}</div>
+      <figure class="shot"><img src="${side}" alt="" loading="lazy"></figure></div>`;
   if (kind === "slab")
     return `<div class="hero slab">${eb}${h1}<div class="under"><div>${lead}</div><div>${cta}</div></div></div>`;
   if (kind === "stack")
@@ -201,6 +212,13 @@ export function buildSite(d, look, watermark) {
     arrow: `background:none;color:var(--acc);padding:6px 0;border-bottom:2px solid var(--acc);border-radius:0`,
   }[look.cta];
 
+  const photos = (d.photos || []).filter(Boolean);
+  const gallery = photos.length
+    ? `<section class="sShots" data-rev><div class="shots ${photos.length === 1 ? "one" : ""}">${photos
+        .map((src, i) => `<figure${i === 0 ? ' data-par="0.03"' : ""}><img src="${src}" alt="" loading="lazy"></figure>`)
+        .join("")}</div></section>`
+    : "";
+
   const stats = (d.stats || []).filter((x) => x && x.value);
   const statsBand = stats.length
     ? `<section class="sStats" data-rev><div class="stats">${stats
@@ -225,6 +243,7 @@ export function buildSite(d, look, watermark) {
   ];
   if (look.swapped) sections.reverse();
   sections.splice(1, 0, statsBand);
+  if (photos.length && look.photo !== "cover") sections.splice(1, 0, gallery);
   sections.push(finalCta);
 
   const mark = watermark
@@ -351,6 +370,28 @@ footer p{color:var(--mut);font-size:14px}
 .bands .band{flex-direction:column;align-items:flex-start;gap:8px}}
 ${mo.css}
 
+/* фотографии */
+.hero.cover{position:relative;padding:0;margin:0 calc(50% - 50vw);width:100vw;min-height:min(84vh,720px);
+  display:flex;align-items:flex-end;overflow:hidden}
+.hero.cover .coverImg{position:absolute;inset:0;overflow:hidden}
+.hero.cover img{width:100%;height:120%;object-fit:cover;display:block}
+.coverVeil{position:absolute;inset:0;background:linear-gradient(180deg,transparent 8%,color-mix(in srgb,var(--bg) 88%,transparent) 92%)}
+.hero.cover .coverText{position:relative;z-index:2;max-width:min(880px,92vw);margin:0 auto;padding:0 24px 72px;width:100%}
+.hero.withShot{display:grid;grid-template-columns:1.05fr .95fr;gap:44px;align-items:center;padding:64px 0 84px}
+.hero.withShot .shot{margin:0;border-radius:var(--r);overflow:hidden;aspect-ratio:4/5;
+  box-shadow:0 32px 70px color-mix(in srgb,var(--ink) 26%,transparent)}
+.hero.withShot .shot img{width:100%;height:100%;object-fit:cover;display:block;transition:transform 1.1s cubic-bezier(.2,.7,.2,1)}
+.hero.withShot .shot:hover img{transform:scale(1.05)}
+@media (max-width:820px){.hero.withShot{grid-template-columns:1fr}}
+.sShots{padding:22px 0 62px}
+.shots{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.shots.one{grid-template-columns:1fr}
+.shots figure{margin:0;overflow:hidden;border-radius:var(--r);aspect-ratio:4/3;
+  box-shadow:0 20px 50px color-mix(in srgb,var(--ink) 20%,transparent)}
+.shots.one figure{aspect-ratio:21/9}
+.shots img{width:100%;height:100%;object-fit:cover;display:block;transition:transform 1.1s cubic-bezier(.2,.7,.2,1)}
+.shots figure:hover img{transform:scale(1.06)}
+
 /* появление при прокрутке */
 [data-rev]{opacity:0;transition:opacity .9s cubic-bezier(.2,.7,.2,1),transform .9s cubic-bezier(.2,.7,.2,1),filter .9s}
 [data-rev].up{transform:translateY(38px)}
@@ -408,7 +449,7 @@ a,button{transition:transform .2s ease,opacity .2s ease,background .2s ease,colo
 ${mo.html}${mark}
 <div class="w">
 <header><div class="brand">${esc(d.businessName)}</div><a class="tel" href="${wa}" target="_blank" rel="noreferrer">${esc(d.phone)}</a></header>
-${heroHtml(look.hero, d, wa)}
+${heroHtml(look.hero, d, wa, look)}
 </div>
 ${marquee}
 <div class="w">
