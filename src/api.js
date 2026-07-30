@@ -21,3 +21,5 @@ export const createRequest = ({ sender, code }) => post("/api/store", { action: 
 export const checkStatus = (code) => post("/api/store", { action: "status", code });
 export const redeem = (code) => post("/api/store", { action: "redeem", code });
 export const adminCall = (pin, op, extra = {}) => post("/api/store", { action: "admin", pin, op, ...extra });
+export const saveProject = (code, payload) => post("/api/store", { action: "save", code, payload });
+export const loadProject = (code) => post("/api/store", { action: "load", code });

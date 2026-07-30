@@ -155,6 +155,26 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true });
     }
 
+    /* ── Сохранение проекта: владелец сайта вернётся и поправит ── */
+    if (action === "save") {
+      const code = String(body.code || "").trim().toUpperCase();
+      const row = rows.find((x) => x.code === code);
+      if (!row || row.status === "pending") return res.status(403).json({ error: "Заказ не оплачен" });
+      const payload = String(body.payload || "");
+      if (payload.length > 120000) return res.status(413).json({ error: "Слишком много данных" });
+      await kvSet("proj:" + code, payload);
+      return res.status(200).json({ ok: true });
+    }
+
+    if (action === "load") {
+      const code = String(body.code || "").trim().toUpperCase();
+      const row = rows.find((x) => x.code === code);
+      if (!row || row.status === "pending") return res.status(404).json({ error: "Заказ не найден или не оплачен" });
+      const payload = await kvGet("proj:" + code, null);
+      if (!payload) return res.status(404).json({ error: "Сохранённый сайт не найден" });
+      return res.status(200).json({ payload });
+    }
+
     /* ── Кабинет: PIN сверяется здесь, на сервере ────────── */
     if (action === "admin") {
       const real = process.env.ADMIN_PIN || "";

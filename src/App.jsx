@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { CSS, Hero3D } from "./ui.jsx";
-import { askAI, reserveAmount, createRequest, checkStatus, redeem, adminCall } from "./api.js";
+import { askAI, reserveAmount, createRequest, checkStatus, redeem, adminCall, saveProject, loadProject } from "./api.js";
 import {
   PALETTES, FONTS, HEROES, BLOCKS, PROOFS, MOTIFS, CTAS, MOODS,
   HERO_RU, BLOCK_RU, PROOF_RU, MOTIF_RU, rollLook, buildSite,
@@ -177,6 +177,12 @@ const CSS2 = `
 .ln-inside h3{font-family:'Playfair Display',serif;font-weight:600;font-size:19px;margin:0 0 8px;color:var(--abyss)}
 .ln-inside p{margin:0;color:var(--dim);font-size:14.5px;line-height:1.6}
 
+/* возврат по заказу */
+.p-return{border:1px dashed var(--line2);border-radius:20px;padding:14px 16px;margin-bottom:20px;background:var(--shell)}
+.p-return>span{font-size:12.5px;color:var(--dim);font-weight:600}
+.p-saved{margin-top:20px;padding:14px 16px;border:1px solid rgba(47,182,174,.4);border-radius:20px;background:#EDFAF9}
+.p-saved .p-note b{color:var(--deep);font-family:monospace;letter-spacing:.06em}
+
 /* появление при прокрутке */
 .rev{opacity:0;transform:translateY(24px);transition:opacity .8s cubic-bezier(.2,.7,.2,1),transform .8s cubic-bezier(.2,.7,.2,1)}
 .rev.in{opacity:1;transform:none}
@@ -344,6 +350,8 @@ export default function App() {
   const [lang, setLang] = useState("ru");
   const [photos, setPhotos] = useState([]);
   const [editing, setEditing] = useState(false);
+  const [myCode, setMyCode] = useState("");
+  const [restore, setRestore] = useState("");
 
   const [sender, setSender] = useState("");
   const [hold, setHold] = useState(null);   // бронь: {code, amount}
@@ -387,6 +395,7 @@ export default function App() {
         if (status === "issued") {
           await redeem(req.code);
           setReq({ ...req, status: "used" }); setPaid(true); setStage(3);
+          setMyCode(req.code); keep(null, null, req.code);
         }
       } catch (e) {}
     }, 7000);
@@ -434,12 +443,36 @@ export default function App() {
     }
     setPhotos((p) => [...p, ...done].slice(0, 3));
   }
+  /* проект хранится на сервере: клиент вернётся по номеру заказа и поправит цены */
+  async function keep(nextData, nextLook, codeOverride) {
+    const code = codeOverride || myCode;
+    if (!code) return;
+    try {
+      await saveProject(code, JSON.stringify({ form, data: nextData || data, look: nextLook || look, lang }));
+    } catch (e) {}
+  }
+  async function openOrder() {
+    setErr("");
+    try {
+      const { payload } = await loadProject(restore);
+      const j = JSON.parse(payload);
+      if (j.form) setForm(j.form);
+      if (j.lang) setLang(j.lang);
+      setData(j.data);
+      setLook(j.look);
+      setMyCode(restore.trim().toUpperCase());
+      setPaid(true);
+      setStage(3);
+      setSerial("заказ " + restore.trim().toUpperCase());
+    } catch (e) { setErr(e.message); }
+  }
   function editField(path, value) {
     setData((d) => {
       const next = JSON.parse(JSON.stringify(d));
       if (path.length === 1) next[path[0]] = value;
       else if (path.length === 3) next[path[0]][path[1]][path[2]] = value;
       else next[path[0]][path[1]] = value;
+      keep(next);
       return next;
     });
   }
@@ -481,13 +514,14 @@ export default function App() {
     try {
       const r = await createRequest({ sender, code: hold.code });
       setReq({ code: r.code, sender, amount: hold.amount, status: r.status });
-      if (r.status === "issued") { await redeem(r.code); setPaid(true); setStage(3); }
+      setMyCode(r.code);
+      if (r.status === "issued") { await redeem(r.code); setPaid(true); setStage(3); keep(null, null, r.code); }
     } catch (e) { setErr(e.message); }
   }
 
   async function activate() {
     setErr("");
-    try { await redeem(code); setPaid(true); setStage(3); }
+    try { await redeem(code); setPaid(true); setStage(3); const c = code.trim().toUpperCase(); setMyCode(c); keep(null, null, c); }
     catch (e) { setErr(e.message); }
   }
 
@@ -622,6 +656,15 @@ export default function App() {
               <input id="t" className="p-input" value={form.phone} onChange={set("phone")} />
             </div>
 
+            <div className="p-return">
+              <span>Уже покупали сайт?</span>
+              <div className="p-row" style={{ marginTop: 8 }}>
+                <input className="p-input" placeholder="Номер заказа" value={restore}
+                  onChange={(e) => setRestore(e.target.value)} aria-label="Номер заказа" />
+                <button className="p-mini" type="button" onClick={openOrder}>Открыть</button>
+              </div>
+            </div>
+
             <div className="p-field">
               <span className="p-label">Язык сайта</span>
               <div className="p-langs">
@@ -678,11 +721,36 @@ export default function App() {
                       onChange={(e) => editField(["ctaText"], e.target.value)} />
                     <label className="p-label">Услуги</label>
                     {(data.services || []).map((sv, i) => (
-                      <div key={i} style={{ marginBottom: 10 }}>
+                      <div key={i} style={{ marginBottom: 12 }}>
                         <input className="p-input" value={sv.title} style={{ marginBottom: 6 }}
                           onChange={(e) => editField(["services", i, "title"], e.target.value)} />
-                        <input className="p-input" value={sv.text}
-                          onChange={(e) => editField(["services", i, "text"], e.target.value)} />
+                        <div className="p-row" style={{ marginTop: 0 }}>
+                          <input className="p-input" value={sv.text}
+                            onChange={(e) => editField(["services", i, "text"], e.target.value)} />
+                          <input className="p-input" value={sv.price || ""} placeholder="цена"
+                            style={{ maxWidth: 118 }}
+                            onChange={(e) => editField(["services", i, "price"], e.target.value)} />
+                        </div>
+                      </div>
+                    ))}
+
+                    <label className="p-label">Часы работы</label>
+                    {(data.hours || []).map((h, i) => (
+                      <div className="p-row" key={i} style={{ marginTop: 0, marginBottom: 6 }}>
+                        <input className="p-input" value={h.days} placeholder="Пн–Пт"
+                          onChange={(e) => editField(["hours", i, "days"], e.target.value)} />
+                        <input className="p-input" value={h.time} placeholder="10:00–20:00"
+                          onChange={(e) => editField(["hours", i, "time"], e.target.value)} />
+                      </div>
+                    ))}
+
+                    <label className="p-label">Частые вопросы</label>
+                    {(data.faq || []).map((q, i) => (
+                      <div key={i} style={{ marginBottom: 10 }}>
+                        <input className="p-input" value={q.q} style={{ marginBottom: 6 }} placeholder="вопрос"
+                          onChange={(e) => editField(["faq", i, "q"], e.target.value)} />
+                        <input className="p-input" value={q.a} placeholder="ответ"
+                          onChange={(e) => editField(["faq", i, "a"], e.target.value)} />
                       </div>
                     ))}
                     <label className="p-label">Адрес и часы</label>
@@ -762,7 +830,17 @@ export default function App() {
               </div>
             )}
 
-            {paid && <p className="p-ok" style={{ marginTop: 20 }}>✓ оплачено · сайт ваш</p>}
+            {paid && (
+              <div className="p-saved">
+                <p className="p-ok">✓ оплачено · сайт ваш</p>
+                {myCode && (
+                  <p className="p-note" style={{ marginTop: 8 }}>
+                    Номер заказа <b>{myCode}</b> — сохраните. По нему вернётесь сюда, поменяете цены
+                    или часы работы и скачаете обновлённый сайт бесплатно.
+                  </p>
+                )}
+              </div>
+            )}
             {err && <div className="p-err">{err}</div>}
           </div>
 
