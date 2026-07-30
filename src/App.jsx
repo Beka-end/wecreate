@@ -229,6 +229,16 @@ const CSS2 = `
 .p-codeCopy:hover{transform:translateY(-2px)}
 .p-codeWarn{display:block;margin-top:12px;font-size:12.5px;line-height:1.6;color:var(--coral);font-weight:600}
 
+/* свернуть напоминание о коде */
+.p-codeHide{margin-top:10px;background:none;border:none;color:var(--dim);font-size:12.5px;cursor:pointer;
+  text-decoration:underline;padding:4px}
+.p-codeHide:hover{color:var(--abyss)}
+.p-codeSlim{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:12px;padding:10px 14px;
+  border-radius:100px;background:var(--shell);border:1px solid var(--line)}
+.p-codeSlim>span{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);font-weight:700}
+.p-codeSlim>b{font-family:'JetBrains Mono',monospace;font-size:13.5px;letter-spacing:.06em;color:var(--abyss);
+  user-select:all;margin-right:auto}
+
 /* живая ссылка */
 .p-live{display:block;font-family:'Playfair Display',serif;font-size:clamp(17px,2.4vw,23px);color:var(--deep);
   text-decoration:none;padding:14px 18px;border-radius:18px;background:#EDFAF9;
@@ -438,6 +448,7 @@ export default function App() {
   const [live, setLive] = useState("");
   const [pubBusy, setPubBusy] = useState(false);
   const [pubMsg, setPubMsg] = useState("");
+  const [showCode, setShowCode] = useState(true);
 
   const [sender, setSender] = useState("");
   const [hold, setHold] = useState(null);   // бронь: {code, amount}
@@ -447,7 +458,6 @@ export default function App() {
   const [admin, setAdmin] = useState(false);
 
   const busy = stage >= 0 && stage < 2;
-  const linkRef = useRef(null);
   const clicks = useRef({ n: 0, t: 0 });
   const seen = useRef(new Set());
   const recent = useRef({ palettes: [], fonts: [] });
@@ -542,20 +552,37 @@ export default function App() {
       await saveProject(code, JSON.stringify({ form, data: nextData || data, look: nextLook || look, lang }));
     } catch (e) {}
   }
-  async function openOrder() {
+  /* Один вход для любого кода: свежий активируем, свой — открываем.
+     Работает и для только что выданного кода, у которого проекта ещё нет. */
+  async function openByCode(raw) {
     setErr("");
+    const c = String(raw || "").trim().toUpperCase();
+    if (c.length < 4) { setErr("Введите номер заказа"); return; }
+
+    let ok = false;
+    try { await redeem(c); ok = true; }
+    catch (e) {
+      if (/использован/i.test(e.message)) ok = true;
+      else { setErr(e.message); return; }
+    }
+    if (!ok) return;
+
+    setMyCode(c); setPaid(true); setStage(3); setShowCode(false);
+
     try {
-      const { payload } = await loadProject(restore);
+      const { payload } = await loadProject(c);
       const j = JSON.parse(payload);
       if (j.form) setForm(j.form);
       if (j.lang) setLang(j.lang);
-      setData(j.data);
-      setLook(j.look);
-      setMyCode(restore.trim().toUpperCase());
-      setPaid(true);
-      setStage(3);
-      setSerial("заказ " + restore.trim().toUpperCase());
-    } catch (e) { setErr(e.message); }
+      if (j.data) setData(j.data);
+      if (j.look) setLook(j.look);
+      setSerial("заказ " + c);
+      publish(c);
+    } catch (e) {
+      /* проекта ещё нет — просто открыли доступ, сайт соберётся из текущих данных */
+      if (data) { keep(null, null, c); publish(c); }
+      else setErr("Доступ открыт. Опишите бизнес и нажмите «Создать сайт».");
+    }
   }
   /* правка сайта словами: модель возвращает только изменившиеся поля */
   const LOOK_KEYS = {
@@ -730,50 +757,7 @@ ${brief_}
     } catch (e) { setErr(e.message); }
   }
 
-  /* Ввод кода: свежий — активируем, уже активированный — просто открываем свой сайт.
-     Раньше во втором случае выдавалась ошибка, хотя код принадлежит владельцу. */
-  async function activate() {
-    setErr("");
-    const c = String(code).trim().toUpperCase();
-    if (!c) return;
-    let opened = false;
-    try {
-      await redeem(c);
-      opened = true;
-    } catch (e) {
-      const already = /использован/i.test(e.message);
-      if (!already) { setErr(e.message); return; }
-      opened = true; // код уже был активирован — это нормально, открываем проект
-    }
-    if (!opened) return;
-
-    setMyCode(c);
-    setPaid(true);
-    setStage(3);
-
-    /* если сайт по этому коду уже собирался — восстанавливаем его целиком */
-    try {
-      const { payload } = await loadProject(c);
-      const j = JSON.parse(payload);
-      if (j.form) setForm(j.form);
-      if (j.lang) setLang(j.lang);
-      if (j.data) setData(j.data);
-      if (j.look) setLook(j.look);
-      setSerial("заказ " + c);
-    } catch (e) {
-      keep(null, null, c);
-    }
-    publish(c);
-  }
-
-  function download() {
-    const blob = new Blob([buildSite({ ...data, photos }, look, false)], { type: "text/html" });
-    const url = URL.createObjectURL(blob);
-    const a = linkRef.current;
-    a.href = url; a.download = "index.html"; a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  }
-  const [copied, setCopied] = useState("");
+    const [copied, setCopied] = useState("");
   function copy(text) {
     const done = () => { setCopied(text); setTimeout(() => setCopied(""), 1800); };
     if (navigator.clipboard) navigator.clipboard.writeText(text).then(done).catch(() => {});
@@ -1135,7 +1119,7 @@ ${brief_}
                 <div className="p-row">
                   <input className="p-input" placeholder="Номер заказа или код доступа" value={code}
                     onChange={(e) => setCode(e.target.value)} aria-label="Код доступа" />
-                  <button className="p-mini" type="button" onClick={activate}>Открыть</button>
+                  <button className="p-mini" type="button" onClick={() => openByCode(code)}>Открыть</button>
                 </div>
               </div>
             )}
@@ -1143,7 +1127,7 @@ ${brief_}
             {paid && (
               <div className="p-saved">
                 <p className="p-ok">✓ оплачено · сайт ваш</p>
-                {myCode && (
+                {myCode && (showCode ? (
                   <div className="p-codeBox">
                     <span className="p-codeLabel">Ваш номер заказа</span>
                     <b className="p-codeVal">{myCode}</b>
@@ -1154,8 +1138,20 @@ ${brief_}
                       Скопируйте и сохраните. По нему вернётесь сюда, поменяете цены или часы
                       и обновите сайт бесплатно. Другого способа вернуться нет.
                     </span>
+                    <button className="p-codeHide" type="button" onClick={() => setShowCode(false)}>
+                      Записал, свернуть
+                    </button>
                   </div>
-                )}
+                ) : (
+                  <div className="p-codeSlim">
+                    <span>заказ</span>
+                    <b>{myCode}</b>
+                    <button className="p-act" type="button" onClick={() => copy(myCode)}>
+                      {copied === myCode ? "✓" : "копировать"}
+                    </button>
+                    <button className="p-act" type="button" onClick={() => setShowCode(true)}>показать</button>
+                  </div>
+                ))}
               </div>
             )}
             {err && <div className="p-err">{err}</div>}
@@ -1183,7 +1179,7 @@ ${brief_}
                     </div>
                     <p className="p-note">
                       Ссылка работает сразу — отправляйте клиентам, ставьте в Instagram и 2ГИС.
-                      После правок нажмите «Обновить сайт». Файл можно и скачать — кнопка справа вверху.
+                      После правок нажмите «Обновить сайт» — по этой же ссылке появится новая версия.
                     </p>
                   </>
                 ) : (
@@ -1198,9 +1194,7 @@ ${brief_}
               <div className="p-tools">
                 <button className="p-tool" type="button" data-on={device === "desktop" ? "1" : "0"} onClick={() => setDevice("desktop")}>Десктоп</button>
                 <button className="p-tool" type="button" data-on={device === "mobile" ? "1" : "0"} onClick={() => setDevice("mobile")}>Телефон</button>
-                <button className="p-tool" type="button" onClick={download} disabled={!paid || !data}>
-                  {paid ? "Скачать HTML" : "Скачивание после оплаты"}
-                </button>
+
               </div>
             </div>
 
@@ -1215,7 +1209,6 @@ ${brief_}
                 </div>
               )}
             </div>
-            <a ref={linkRef} style={{ display: "none" }} href="#d">скачать</a>
           </div>
         </div>
         </div>
@@ -1235,7 +1228,7 @@ ${brief_}
             ["Частые вопросы", "Раскрывающиеся ответы про запись, оплату и сроки."],
             ["Ваши фотографии", "До трёх снимков: обложка, снимок у заголовка или галерея."],
             ["Разметка для поиска", "Название, телефон, адрес и часы — в формате, который читает Google."],
-            ["Готовая ссылка", "Сайт открывается сразу после оплаты. Файл тоже можно скачать и забрать себе."],
+            ["Готовая ссылка", "Сайт открывается сразу после оплаты — ни хостинга, ни файлов, ни настроек."],
           ].map(([t, p]) => (
             <div key={t}><h3>{t}</h3><p>{p}</p></div>
           ))}
@@ -1259,7 +1252,7 @@ ${brief_}
             <small>Один платёж через Kaspi. Без подписки, продлений и скрытых списаний.</small>
           </div>
           <ul className="ln-inc">
-            <li>Готовая ссылка сразу после оплаты — публиковать ничего не нужно</li>
+            <li>Готовая ссылка сразу после оплаты — ничего скачивать и публиковать не нужно</li>
             <li>Кнопка WhatsApp с готовым сообщением и панель звонка на телефоне</li>
             <li>Цены, часы работы, вопросы-ответы и ваши фотографии</li>
             <li>Уникальный дизайн: цвета, шрифты и вёрстка не повторяются</li>
