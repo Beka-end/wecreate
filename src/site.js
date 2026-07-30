@@ -58,6 +58,8 @@ export function rollLook(mood, avoid) {
       hero: pick(HEROES), block: pick(BLOCKS), proof: pick(PROOFS), motif: pick(MOTIFS),
       width: pick(WIDTHS), cta: pick(CTAS),
       radius: pick(["0px", "2px", "6px", "14px", "999px"]),
+      reveal: pick(["up", "left", "scale", "clip", "blur"]),
+      marquee: Math.random() < 0.45,
       upper: Math.random() < 0.35,
       swapped: Math.random() < 0.35,
     };
@@ -83,7 +85,7 @@ export function waLink(phone, business) {
 /* ─── Декор фона ───────────────────────────────────────────────────── */
 export function motif(kind) {
   if (kind === "rings")
-    return { html: `<svg id="bg" viewBox="0 0 600 600" aria-hidden="true"><g fill="none" stroke="var(--acc)" stroke-width="1">
+    return { html: `<svg id="bg" data-par="0.06" viewBox="0 0 600 600" aria-hidden="true"><g fill="none" stroke="var(--acc)" stroke-width="1">
       <circle cx="300" cy="300" r="120"/><circle cx="300" cy="300" r="190"/><circle cx="300" cy="300" r="260"/>
       <circle cx="300" cy="300" r="292" stroke-dasharray="4 12"/></g></svg>`,
       css: `#bg{position:fixed;top:50%;right:-14vw;width:78vw;transform:translateY(-50%);z-index:0;opacity:.3;
@@ -97,7 +99,7 @@ export function motif(kind) {
       css: `#bg{position:fixed;inset:0;z-index:0;opacity:.45;
       background-image:repeating-linear-gradient(90deg,transparent 0 calc(12.5% - 1px),var(--mut) calc(12.5% - 1px) 12.5%)}` };
   if (kind === "blob")
-    return { html: `<div id="bg" aria-hidden="true"><i></i><b></b></div>`,
+    return { html: `<div id="bg" data-par="0.04" aria-hidden="true"><i></i><b></b></div>`,
       css: `#bg{position:fixed;inset:0;z-index:0;overflow:hidden}
       #bg i,#bg b{position:absolute;border-radius:50%;filter:blur(90px)}
       #bg i{width:58vw;height:58vw;background:var(--acc);opacity:.18;top:-16vw;right:-10vw;animation:drift 24s ease-in-out infinite alternate}
@@ -199,11 +201,31 @@ export function buildSite(d, look, watermark) {
     arrow: `background:none;color:var(--acc);padding:6px 0;border-bottom:2px solid var(--acc);border-radius:0`,
   }[look.cta];
 
+  const stats = (d.stats || []).filter((x) => x && x.value);
+  const statsBand = stats.length
+    ? `<section class="sStats" data-rev><div class="stats">${stats
+        .map((x) => `<div><b data-count="${esc(x.value)}">${esc(x.value)}</b><span>${esc(x.label)}</span></div>`)
+        .join("")}</div></section>`
+    : "";
+
+  const strip = (d.services || []).map((x) => esc(x.title)).join(" — ");
+  const marquee = look.marquee
+    ? `<div class="mq" aria-hidden="true"><div><span>${strip} — </span><span>${strip} — </span></div></div>`
+    : "";
+
+  const finalCta = `<section class="sFinal" data-rev>
+      <h2 class="bigCta">${esc(d.finalHeadline || "Напишите — ответим сегодня")}</h2>
+      <p class="finalSub">${esc(d.address)}</p>
+      <a class="cta" href="${wa}" target="_blank" rel="noreferrer">${esc(d.ctaText)}</a>
+    </section>`;
+
   const sections = [
-    `<section class="sBlock"><h2>${esc(d.servicesTitle || "Что мы делаем")}</h2>${blockHtml(look.block, d)}</section>`,
-    `<section class="sProof"><h2>${esc(d.pointsTitle || "Почему к нам возвращаются")}</h2>${proofHtml(look.proof, d)}</section>`,
+    `<section class="sBlock" data-rev><h2>${esc(d.servicesTitle || "Что мы делаем")}</h2>${blockHtml(look.block, d)}</section>`,
+    `<section class="sProof" data-rev><h2>${esc(d.pointsTitle || "Почему к нам возвращаются")}</h2>${proofHtml(look.proof, d)}</section>`,
   ];
   if (look.swapped) sections.reverse();
+  sections.splice(1, 0, statsBand);
+  sections.push(finalCta);
 
   const mark = watermark
     ? `<div id="wm">предпросмотр · станок</div><style>#wm{position:fixed;z-index:99;right:16px;bottom:16px;
@@ -217,6 +239,11 @@ export function buildSite(d, look, watermark) {
   return `<!doctype html>
 <html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(d.businessName)} — ${esc(d.tagline)}</title>
+<meta name="description" content="${esc(d.heroSub)}">
+<meta property="og:title" content="${esc(d.businessName)} — ${esc(d.tagline)}">
+<meta property="og:description" content="${esc(d.heroSub)}">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='${encodeURIComponent(p.acc)}'/%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?${f.q}&display=swap" rel="stylesheet">
 <style>
 :root{--bg:${p.bg};--paper:${p.paper};--ink:${p.ink};--acc:${p.acc};--mut:${p.mut};--ctc:${p.cta};--r:${look.radius};--w:${look.width}px}
@@ -323,13 +350,68 @@ footer p{color:var(--mut);font-size:14px}
 .menu>div:after{display:none}.menu dd{text-align:left}
 .bands .band{flex-direction:column;align-items:flex-start;gap:8px}}
 ${mo.css}
-@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* появление при прокрутке */
+[data-rev]{opacity:0;transition:opacity .9s cubic-bezier(.2,.7,.2,1),transform .9s cubic-bezier(.2,.7,.2,1),filter .9s}
+[data-rev].up{transform:translateY(38px)}
+[data-rev].left{transform:translateX(-42px)}
+[data-rev].scale{transform:scale(.94)}
+[data-rev].clip{clip-path:inset(0 0 100% 0)}
+[data-rev].blur{filter:blur(14px);transform:translateY(20px)}
+[data-rev].seen{opacity:1;transform:none;filter:none;clip-path:inset(0 0 0 0)}
+[data-rev] > *{transition:opacity .7s ease,transform .7s cubic-bezier(.2,.7,.2,1)}
+[data-rev]:not(.seen) .card,[data-rev]:not(.seen) .row,[data-rev]:not(.seen) .band,
+[data-rev]:not(.seen) .step,[data-rev]:not(.seen) .menu>div{opacity:0;transform:translateY(22px)}
+[data-rev].seen .card,[data-rev].seen .row,[data-rev].seen .band,
+[data-rev].seen .step,[data-rev].seen .menu>div{opacity:1;transform:none;
+  transition:opacity .7s ease var(--d,0s),transform .7s cubic-bezier(.2,.7,.2,1) var(--d,0s)}
+
+/* липкая шапка, ужимается при прокрутке */
+header{position:sticky;top:0;z-index:40;transition:padding .35s ease,background .35s ease,backdrop-filter .35s;
+  backdrop-filter:blur(0px)}
+header.stuck{padding:12px 0;background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:blur(14px);
+  border-bottom:1px solid color-mix(in srgb,var(--mut) 30%,transparent)}
+header.stuck .brand{font-size:18px}
+
+/* полоса цифр */
+.sStats{padding:52px 0}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:28px;text-align:center}
+.stats b{display:block;font-family:'${f.d}',serif;font-size:clamp(34px,5.4vw,60px);line-height:1;color:var(--acc);
+  letter-spacing:-.03em}
+.stats span{display:block;margin-top:10px;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut)}
+
+/* бегущая строка */
+.mq{overflow:hidden;padding:14px 0;border-top:1px solid color-mix(in srgb,var(--mut) 30%,transparent);
+  border-bottom:1px solid color-mix(in srgb,var(--mut) 30%,transparent)}
+.mq>div{display:flex;width:max-content;animation:mqSlide 32s linear infinite}
+.mq span{font-family:'${f.d}',serif;font-size:clamp(18px,2.6vw,30px);color:var(--acc);white-space:nowrap;
+  padding-right:24px;opacity:.85}
+@keyframes mqSlide{to{transform:translateX(-50%)}}
+
+/* финальный призыв */
+.sFinal{text-align:center;padding:88px 0 96px}
+.bigCta{font-size:clamp(28px,5.2vw,58px);line-height:1.06;max-width:16ch;margin:0 auto 18px}
+.finalSub{color:var(--mut);font-size:16px;margin-bottom:30px}
+.sFinal .cta{margin-top:0}
+
+/* плавные мелочи */
+html{scroll-behavior:smooth}
+a,button{transition:transform .2s ease,opacity .2s ease,background .2s ease,color .2s ease}
+.tel:hover{opacity:.7}
+.cta:focus-visible,.tel:focus-visible,.float:focus-visible{outline:3px solid var(--acc);outline-offset:4px}
+.card,.band,.row,.step{will-change:transform}
+
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}
+  [data-rev]{opacity:1!important;transform:none!important;filter:none!important;clip-path:none!important}}
 </style></head>
 <body>
 ${mo.html}${mark}
 <div class="w">
 <header><div class="brand">${esc(d.businessName)}</div><a class="tel" href="${wa}" target="_blank" rel="noreferrer">${esc(d.phone)}</a></header>
 ${heroHtml(look.hero, d, wa)}
+</div>
+${marquee}
+<div class="w">
 ${sections.join("\n")}
 <footer><p>${esc(d.address)}</p><p>${esc(d.businessName)} · ${esc(d.phone)}</p></footer>
 </div>
@@ -337,5 +419,67 @@ ${sections.join("\n")}
 <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.5 14.4c-.3-.2-1.7-.9-2-1-.3-.1-.5-.2-.7.1-.2.3-.7 1-.9 1.2-.2.2-.3.2-.6.1-.3-.2-1.2-.5-2.3-1.4-.9-.8-1.4-1.7-1.6-2-.2-.3 0-.5.1-.6l.5-.5c.1-.2.2-.3.3-.5 0-.2 0-.4-.1-.5l-.9-2.1c-.2-.5-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.4s1 2.8 1.2 3c.1.2 2 3.1 5 4.3.7.3 1.2.5 1.6.6.7.2 1.3.2 1.8.1.6-.1 1.7-.7 1.9-1.4.2-.7.2-1.3.2-1.4-.1-.1-.3-.2-.6-.3z"/><path d="M12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.4 1.3 4.9L2 22l5.3-1.4c1.4.8 3 1.2 4.7 1.2 5.5 0 10-4.5 10-10S17.5 2 12 2zm0 18.2c-1.6 0-3-.4-4.3-1.2l-.3-.2-3.1.8.8-3-.2-.3c-.8-1.3-1.3-2.8-1.3-4.4 0-4.5 3.7-8.2 8.2-8.2s8.2 3.7 8.2 8.2-3.6 8.3-8 8.3z"/></svg>
 Написать в WhatsApp</a>
 ${mo.script ? dotsScript : ""}
+<script>
+(function(){
+  var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var revealKind = '${look.reveal}';
+
+  /* появление секций и ступенчатый выход карточек */
+  var items = document.querySelectorAll('[data-rev]');
+  items.forEach(function(el){ el.classList.add(revealKind); });
+  if (reduce || !('IntersectionObserver' in window)) {
+    items.forEach(function(el){ el.classList.add('seen'); });
+  } else {
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){
+        if(!en.isIntersecting) return;
+        en.target.classList.add('seen');
+        var kids = en.target.querySelectorAll('.card,.row,.band,.step,.menu>div');
+        kids.forEach(function(k,i){ k.style.setProperty('--d', (i*0.09)+'s'); });
+        io.unobserve(en.target);
+      });
+    }, { rootMargin: '-12% 0px -8% 0px' });
+    items.forEach(function(el){ io.observe(el); });
+  }
+
+  /* шапка ужимается при прокрутке */
+  var head = document.querySelector('header');
+  var onScroll = function(){
+    if (head) head.classList.toggle('stuck', window.scrollY > 40);
+    if (!reduce) {
+      var par = document.querySelectorAll('[data-par]');
+      par.forEach(function(el){
+        var k = parseFloat(el.getAttribute('data-par')) || 0.1;
+        el.style.transform = 'translate3d(0,' + (window.scrollY * k * -1) + 'px,0)';
+      });
+    }
+  };
+  addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+
+  /* цифры набегают, когда до них дошли */
+  var nums = document.querySelectorAll('[data-count]');
+  if (nums.length && !reduce && 'IntersectionObserver' in window) {
+    var io2 = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){
+        if(!en.isIntersecting) return;
+        var el = en.target, raw = el.getAttribute('data-count');
+        var num = parseFloat(String(raw).replace(/[^0-9.]/g,''));
+        if (isNaN(num)) { io2.unobserve(el); return; }
+        var suffix = String(raw).replace(/[0-9.\s]/g,'');
+        var t0 = performance.now(), dur = 1500;
+        (function step(t){
+          var k = Math.min((t - t0)/dur, 1);
+          var v = Math.round(num * (1 - Math.pow(1-k,3)));
+          el.textContent = v.toLocaleString('ru-RU') + suffix;
+          if (k < 1) requestAnimationFrame(step);
+        })(t0);
+        io2.unobserve(el);
+      });
+    }, { rootMargin: '-10%' });
+    nums.forEach(function(n){ io2.observe(n); });
+  }
+})();
+<\/script>
 </body></html>`;
 }

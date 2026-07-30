@@ -128,6 +128,31 @@ const CSS2 = `
 .ln-foot{padding:44px 34px 72px;max-width:1220px;margin:0 auto;display:flex;justify-content:space-between;gap:20px;
   flex-wrap:wrap;font-size:13.5px;color:var(--faint);border-top:1px solid var(--line)}
 
+/* медленно вращающееся кольцо за заголовком */
+.ln-ring{position:absolute;z-index:2;left:50%;top:38%;width:min(680px,92vw);aspect-ratio:1;translate:-50% -50%;
+  border-radius:50%;pointer-events:none;opacity:.5;
+  background:conic-gradient(from 0deg,transparent 0 12%,rgba(47,182,174,.5) 22%,transparent 34% 62%,
+    rgba(255,196,107,.55) 72%,transparent 84%);
+  -webkit-mask:radial-gradient(circle,transparent 63%,#000 64%,#000 66%,transparent 67%);
+  mask:radial-gradient(circle,transparent 63%,#000 64%,#000 66%,transparent 67%);
+  animation:ringSpin 46s linear infinite}
+.ln-ring.two{width:min(940px,120vw);opacity:.32;animation-duration:78s;animation-direction:reverse}
+@keyframes ringSpin{to{transform:rotate(1turn)}}
+
+/* конструктор мягко покачивается, пока на него не навели */
+.ln-frame{animation:hover 9s ease-in-out infinite}
+.ln-scene:hover .ln-frame{animation:none}
+@keyframes hover{50%{transform:translateY(-10px) rotateX(1.2deg)}}
+
+/* значок прокрутки */
+.ln-scroll{position:absolute;bottom:26px;left:50%;translate:-50%;z-index:5;display:flex;flex-direction:column;
+  align-items:center;gap:8px;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);
+  font-weight:700}
+.ln-scroll i{width:1px;height:38px;background:linear-gradient(180deg,var(--lagoon),transparent);
+  animation:drop 2.4s ease-in-out infinite}
+@keyframes drop{0%{transform:scaleY(.2);transform-origin:top}50%{transform:scaleY(1);transform-origin:top}
+  51%{transform-origin:bottom}100%{transform:scaleY(.2);transform-origin:bottom}}
+
 /* появление при прокрутке */
 .rev{opacity:0;transform:translateY(24px);transition:opacity .8s cubic-bezier(.2,.7,.2,1),transform .8s cubic-bezier(.2,.7,.2,1)}
 .rev.in{opacity:1;transform:none}
@@ -366,7 +391,8 @@ export default function App() {
 Телефон: ${form.phone}
 
 Верни ТОЛЬКО JSON без markdown. Поле mood — одно из: тёмный, светлый, премиум, дерзкий, природный, технологичный.
-{"mood":"","businessName":"","tagline":"до 4 слов","heroHeadline":"до 7 слов, конкретно, без штампов вроде «качество и надёжность»","heroSub":"2 предложения о пользе для клиента","ctaText":"2-3 слова, призыв написать в WhatsApp","servicesTitle":"","services":[{"title":"","text":"одно предложение"},{"title":"","text":""},{"title":"","text":""}],"pointsTitle":"","points":["","",""],"address":"город и режим работы","phone":""}`;
+В stats дай три правдоподобных для такого дела показателя: короткое значение и подпись. Не выдумывай награды и премии.
+{"mood":"","businessName":"","tagline":"до 4 слов","heroHeadline":"до 7 слов, конкретно, без штампов вроде «качество и надёжность»","heroSub":"2 предложения о пользе для клиента","ctaText":"2-3 слова, призыв написать в WhatsApp","servicesTitle":"","services":[{"title":"","text":"одно предложение"},{"title":"","text":""},{"title":"","text":""}],"pointsTitle":"","points":["","",""],"stats":[{"value":"7 лет","label":"на рынке"},{"value":"3 000","label":"клиентов"},{"value":"20 мин","label":"средний визит"}],"finalHeadline":"призыв на 4-6 слов","address":"город и режим работы","phone":""}`;
     try {
       const parsed = await askAI(prompt);
       setStage(1);
@@ -435,6 +461,8 @@ export default function App() {
 
       <header className="ln-hero">
         <div className="ln-sunhalo" />
+        <div className="ln-ring" />
+        <div className="ln-ring two" />
         <div className="ln-water"><Hero3D /></div>
         <div className="ln-waterFade" />
         <div className="ln-heroIn">
@@ -454,6 +482,7 @@ export default function App() {
             <div><b><CountUp to={COMBOS} /></b><span>вариантов дизайна</span></div>
           </div>
         </div>
+        <div className="ln-scroll" aria-hidden="true">листайте<i /></div>
       </header>
 
       <section className="ln-sec rev" id="how">
