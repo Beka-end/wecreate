@@ -339,6 +339,8 @@ export default function App() {
     about: "Мужские стрижки и бритьё опасной бритвой. Без записи, три мастера, кофе за счёт заведения.",
     city: "Алматы",
     phone: "+7 700 000-00-00",
+    priceList: "Стрижка — 5 000 ₸\nБритьё опасной бритвой — 4 000 ₸\nБорода — 3 000 ₸",
+    hoursText: "Пн–Пт — 10:00–21:00\nСб–Вс — 11:00–19:00",
   });
   const [stage, setStage] = useState(-1);
   const [data, setData] = useState(null);
@@ -466,6 +468,18 @@ export default function App() {
       setSerial("заказ " + restore.trim().toUpperCase());
     } catch (e) { setErr(e.message); }
   }
+  /* строки вида «Стрижка — 5 000 ₸» разбираем на пару, время внутри значения не ломаем */
+  function parsePairs(text) {
+    return String(text || "")
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .map((l) => {
+        const m = l.match(/^(.*?)\s[—–-]\s(.*)$/);
+        return m ? { left: m[1].trim(), right: m[2].trim() } : { left: l, right: "" };
+      });
+  }
+
   function editField(path, value) {
     setData((d) => {
       const next = JSON.parse(JSON.stringify(d));
@@ -486,6 +500,8 @@ export default function App() {
 Город: ${form.city}
 Телефон: ${form.phone}
 Язык всех текстов: ${lang === "kk" ? "казахский" : "русский"}
+${parsePairs(form.priceList).length ? "Услуги и цены (взять дословно, ничего не менять и не добавлять):\n" + parsePairs(form.priceList).map((x) => `- ${x.left}${x.right ? " — " + x.right : ""}`).join("\n") : ""}
+${parsePairs(form.hoursText).length ? "Часы работы (взять дословно):\n" + parsePairs(form.hoursText).map((x) => `- ${x.left} ${x.right}`).join("\n") : ""}
 
 Верни ТОЛЬКО JSON без markdown. Поле mood — одно из: тёмный, светлый, премиум, дерзкий, природный, технологичный.
 В stats дай три правдоподобных показателя: короткое значение и подпись. Не выдумывай награды и премии.
@@ -497,7 +513,19 @@ export default function App() {
       setStage(1);
       const m = MOODS[parsed.mood] ? parsed.mood : "светлый";
       setMood(m); setLook(freshLook(m));
-      setData({ ...parsed, phone: parsed.phone || form.phone, city: parsed.city || form.city });
+      /* свои цены и часы всегда сильнее того, что придумала модель */
+      const myServices = parsePairs(form.priceList);
+      const myHours = parsePairs(form.hoursText);
+      const merged = { ...parsed, phone: parsed.phone || form.phone, city: parsed.city || form.city };
+      if (myServices.length) {
+        merged.services = myServices.map((x, i) => ({
+          title: x.left,
+          price: x.right,
+          text: (parsed.services && parsed.services[i] && parsed.services[i].text) || "",
+        }));
+      }
+      if (myHours.length) merged.hours = myHours.map((x) => ({ days: x.left, time: x.right }));
+      setData(merged);
       setSerial("№ " + Date.now().toString().slice(-6));
       setStage(2);
       try { setHold(await reserveAmount()); } catch (e) { setHold(null); }
@@ -663,6 +691,21 @@ export default function App() {
                   onChange={(e) => setRestore(e.target.value)} aria-label="Номер заказа" />
                 <button className="p-mini" type="button" onClick={openOrder}>Открыть</button>
               </div>
+            </div>
+
+            <div className="p-field">
+              <label className="p-label" htmlFor="pl">Услуги и цены · по строке на услугу</label>
+              <textarea id="pl" className="p-area" value={form.priceList} onChange={set("priceList")}
+                placeholder={"Стрижка — 5 000 ₸\nБритьё — 4 000 ₸"} />
+              <p className="p-note" style={{ marginTop: 6 }}>
+                Название, тире, цена. Описание к каждой услуге напишет ИИ, а название и цену возьмёт как есть.
+              </p>
+            </div>
+
+            <div className="p-field">
+              <label className="p-label" htmlFor="hr">Часы работы</label>
+              <textarea id="hr" className="p-area" style={{ minHeight: 68 }} value={form.hoursText}
+                onChange={set("hoursText")} placeholder={"Пн–Пт — 10:00–21:00\nСб–Вс — 11:00–19:00"} />
             </div>
 
             <div className="p-field">
