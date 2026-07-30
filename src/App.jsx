@@ -70,7 +70,8 @@ const CSS2 = `
 /* ── Секции ────────────────────────────────────────────────────── */
 .ln-sec{padding:100px 32px;max-width:1240px;margin:0 auto}
 .ln-sec+.ln-sec{border-top:1px solid var(--line)}
-.ln-secHead{margin-bottom:52px;max-width:640px}
+.ln-secHead{margin-bottom:52px;max-width:640px;position:relative;z-index:2}
+.ln-steps,.ln-priceRow{position:relative;z-index:2}
 .ln-tag{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.2em;text-transform:uppercase;
   color:var(--a2);margin:0 0 16px}
 .ln-h2{font-family:'Inter Tight',sans-serif;font-weight:600;font-size:clamp(26px,4vw,44px);
@@ -87,8 +88,7 @@ const CSS2 = `
 @media (max-width:800px){.ln-step{grid-template-columns:34px 1fr;gap:14px}.ln-step p{grid-column:2}}
 
 /* рамка «браузера» вокруг станка */
-.ln-frame{border:1px solid var(--line);border-radius:20px;overflow:hidden;background:var(--deep);
-  box-shadow:0 50px 120px rgba(0,0,0,.6)}
+
 .ln-bar{display:flex;align-items:center;gap:8px;padding:14px 18px;border-bottom:1px solid var(--line);
   background:var(--surface)}
 .ln-bar i{width:10px;height:10px;border-radius:50%;background:#2A2A34;display:block}
@@ -108,6 +108,30 @@ const CSS2 = `
   border:1px solid var(--a2);background:radial-gradient(circle,var(--a2) 0 3px,transparent 4px)}
 .ln-foot{padding:44px 32px 70px;max-width:1240px;margin:0 auto;display:flex;justify-content:space-between;
   gap:20px;flex-wrap:wrap;font-size:13px;color:var(--faint);border-top:1px solid var(--line)}
+
+/* ── Пузырьки на фоне секций ───────────────────────────────────── */
+.orbs{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0}
+.orb{position:absolute;border-radius:50%;filter:blur(.4px);opacity:.5;
+  background:radial-gradient(circle at 32% 28%,rgba(255,255,255,.7),rgba(185,174,255,.16) 42%,transparent 68%);
+  border:1px solid rgba(255,255,255,.12);
+  box-shadow:inset -8px -12px 30px rgba(108,92,231,.28),0 20px 60px rgba(108,92,231,.14);
+  animation:float 22s ease-in-out infinite}
+.orb:nth-child(2){animation-duration:30s;animation-delay:-6s}
+.orb:nth-child(3){animation-duration:26s;animation-delay:-12s}
+.orb:nth-child(4){animation-duration:34s;animation-delay:-3s}
+@keyframes float{
+  0%{transform:translate3d(0,0,0) scale(1)}
+  50%{transform:translate3d(2vw,-4vh,0) scale(1.06)}
+  100%{transform:translate3d(-1vw,2vh,0) scale(.97)}
+}
+
+/* ── Объём: сцена с перспективой и наклон рамки ────────────────── */
+.ln-scene{perspective:1400px;perspective-origin:50% 30%}
+.ln-frame{border:1px solid var(--line2);border-radius:28px;overflow:hidden;background:var(--deep);
+  box-shadow:0 60px 140px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.03) inset,
+             0 -40px 120px rgba(108,92,231,.16);
+  transform-style:preserve-3d;transition:transform .5s cubic-bezier(.2,.8,.2,1);will-change:transform}
+.ln-sec{position:relative}
 
 /* появление при прокрутке */
 .rev{opacity:0;transform:translateY(26px);transition:opacity .8s cubic-bezier(.2,.7,.2,1),transform .8s cubic-bezier(.2,.7,.2,1)}
@@ -267,6 +291,19 @@ export default function App() {
   const clicks = useRef({ n: 0, t: 0 });
   const seen = useRef(new Set());
   useReveal();
+  const frameRef = useRef(null);
+
+  function tiltFrame(e) {
+    const f = frameRef.current;
+    if (!f || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const r = f.getBoundingClientRect();
+    const x = (e.clientX - r.left) / r.width - 0.5;
+    const y = (e.clientY - r.top) / r.height - 0.5;
+    f.style.transform = `rotateY(${x * 5}deg) rotateX(${-y * 4}deg) translateZ(0)`;
+  }
+  function resetTilt() {
+    if (frameRef.current) frameRef.current.style.transform = "";
+  }
 
   useEffect(() => {
     const check = () => setAdmin(window.location.hash === "#kabinet");
@@ -406,6 +443,11 @@ export default function App() {
       </header>
 
       <section className="ln-sec rev" id="how">
+        <div className="orbs" aria-hidden="true">
+          <span className="orb" style={{ width: 220, height: 220, left: "-6%", top: "12%" }} />
+          <span className="orb" style={{ width: 120, height: 120, right: "8%", top: "6%" }} />
+          <span className="orb" style={{ width: 70, height: 70, right: "22%", bottom: "14%" }} />
+        </div>
         <div className="ln-secHead">
           <p className="ln-tag">как это работает</p>
           <h2 className="ln-h2">Четыре шага и ни одного пароля</h2>
@@ -430,7 +472,8 @@ export default function App() {
           <p className="ln-hint">Слева — данные о бизнесе. Справа — то, что увидят ваши клиенты.</p>
         </div>
 
-        <div className="ln-frame">
+        <div className="ln-scene" onMouseMove={tiltFrame} onMouseLeave={resetTilt}>
+        <div className="ln-frame" ref={frameRef}>
         <div className="ln-bar"><i /><i /><i /><span>предпросмотр вашего сайта</span></div>
         <div className="p-grid">
           <div className="p-panel">
@@ -579,9 +622,16 @@ export default function App() {
           </div>
         </div>
         </div>
+        </div>
       </section>
 
       <section className="ln-sec rev" id="price">
+        <div className="orbs" aria-hidden="true">
+          <span className="orb" style={{ width: 300, height: 300, right: "-8%", top: "-10%" }} />
+          <span className="orb" style={{ width: 90, height: 90, left: "12%", bottom: "8%" }} />
+          <span className="orb" style={{ width: 46, height: 46, left: "34%", top: "18%" }} />
+          <span className="orb" style={{ width: 160, height: 160, left: "-4%", top: "40%" }} />
+        </div>
         <div className="ln-secHead">
           <p className="ln-tag">цена</p>
           <h2 className="ln-h2">Один платёж, дальше сайт ваш</h2>
