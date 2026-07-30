@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { CSS, Hero3D } from "./ui.jsx";
-import { askAI, reserveAmount, createRequest, checkStatus, redeem, adminCall, saveProject, loadProject } from "./api.js";
+import { askAI, reserveAmount, createRequest, checkStatus, redeem, adminCall, saveProject, loadProject, publishSite, checkSlug } from "./api.js";
 import {
   PALETTES, FONTS, HEROES, BLOCKS, PROOFS, MOTIFS, CTAS, MOODS,
   HERO_RU, BLOCK_RU, PROOF_RU, MOTIF_RU, rollLook, buildSite,
@@ -212,6 +212,12 @@ const CSS2 = `
 .p-chip:disabled{opacity:.45;cursor:not-allowed}
 .p-fields{margin-top:16px}
 
+/* живая ссылка */
+.p-live{display:block;font-family:'Playfair Display',serif;font-size:clamp(17px,2.4vw,23px);color:var(--deep);
+  text-decoration:none;padding:14px 18px;border-radius:18px;background:#EDFAF9;
+  border:1px solid rgba(47,182,174,.4);word-break:break-all;transition:transform .18s,box-shadow .18s}
+.p-live:hover{transform:translateY(-2px);box-shadow:0 10px 26px rgba(47,182,174,.24)}
+
 /* возврат по заказу */
 .p-return{border:1px dashed var(--line2);border-radius:20px;padding:14px 16px;margin-bottom:20px;background:var(--shell)}
 .p-return>span{font-size:12.5px;color:var(--dim);font-weight:600}
@@ -316,15 +322,16 @@ function Admin({ onExit }) {
               <td>{r.code}</td><td>{r.sender || "—"}</td>
               <td className={Number(r.amount) < PAY.kzt ? "p-flag" : ""}>{r.amount || "—"}</td>
               <td>{r.status === "used" ? "забрал сайт" : "код выдан"}</td>
+              <td>{r.slug ? <a href={"/s/" + r.slug} target="_blank" rel="noreferrer">/s/{r.slug}</a> : "—"}</td>
               <td><button className="p-exit" type="button" onClick={() => op("remove", { code: r.code })}>удалить</button></td>
             </tr>
           ))}
-          {!done.length && <tr><td colSpan="5" style={{ color: "var(--faint)" }}>Пока пусто</td></tr>}
+          {!done.length && <tr><td colSpan="6" style={{ color: "var(--faint)" }}>Пока пусто</td></tr>}
         </tbody>
       </table>
 
       {msg && <div className="p-err">{msg}</div>}
-      <p className="p-note" style={{ marginTop: 22 }}>PIN меняется в настройках Netlify — переменная ADMIN_PIN.</p>
+      <p className="p-note" style={{ marginTop: 22 }}>PIN меняется в переменных окружения Vercel — ADMIN_PIN.</p>
       <p style={{ marginTop: 20 }}><button className="p-exit" type="button" onClick={onExit}>Вернуться на сайт</button></p>
     </div>
   );
@@ -395,6 +402,10 @@ export default function App() {
   const [editing, setEditing] = useState(false);
   const [myCode, setMyCode] = useState("");
   const [restore, setRestore] = useState("");
+  const [slug, setSlug] = useState("");
+  const [live, setLive] = useState("");
+  const [pubBusy, setPubBusy] = useState(false);
+  const [pubMsg, setPubMsg] = useState("");
 
   const [sender, setSender] = useState("");
   const [hold, setHold] = useState(null);   // бронь: {code, amount}
@@ -438,7 +449,7 @@ export default function App() {
         if (status === "issued") {
           await redeem(req.code);
           setReq({ ...req, status: "used" }); setPaid(true); setStage(3);
-          setMyCode(req.code); keep(null, null, req.code);
+          setMyCode(req.code); keep(null, null, req.code); publish(req.code);
         }
       } catch (e) {}
     }, 7000);
@@ -578,6 +589,39 @@ ${JSON.stringify(state)}
     setThinking(false);
   }
 
+  /* «Барбершоп Пила» → barbershop-pila */
+  const TRANSLIT = {
+    а:"a",б:"b",в:"v",г:"g",д:"d",е:"e",ё:"e",ж:"zh",з:"z",и:"i",й:"y",к:"k",л:"l",м:"m",н:"n",о:"o",
+    п:"p",р:"r",с:"s",т:"t",у:"u",ф:"f",х:"h",ц:"c",ч:"ch",ш:"sh",щ:"sch",ъ:"",ы:"y",ь:"",э:"e",ю:"yu",я:"ya",
+    ә:"a",ғ:"g",қ:"q",ң:"ng",ө:"o",ұ:"u",ү:"u",һ:"h",і:"i",
+  };
+  function toSlug(text) {
+    return String(text || "").toLowerCase().split("")
+      .map((ch) => (TRANSLIT[ch] !== undefined ? TRANSLIT[ch] : ch))
+      .join("").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 34);
+  }
+
+  /* публикация: сайт сразу открывается по ссылке */
+  async function publish(codeOverride, slugOverride) {
+    const code = codeOverride || myCode;
+    if (!code || !data) return;
+    const want = (slugOverride || slug || toSlug(form.name) || "site") + "";
+    setPubBusy(true); setPubMsg("");
+    try {
+      let html = buildSite({ ...data, photos }, look, false);
+      if (html.length > 880000 && photos.length) {
+        html = buildSite({ ...data, photos: photos.slice(0, 1) }, look, false);
+        setPubMsg("Фотографии тяжёлые — в опубликованной версии осталась одна. В скачанном файле все.");
+      }
+      const r = await publishSite(code, want, html);
+      setSlug(r.slug);
+      setLive(window.location.origin + "/s/" + r.slug);
+    } catch (e) {
+      setPubMsg(e.message);
+    }
+    setPubBusy(false);
+  }
+
   function editField(path, value) {
     setData((d) => {
       const next = JSON.parse(JSON.stringify(d));
@@ -642,7 +686,10 @@ ${brief_}
       const r = await createRequest({ sender, code: hold.code });
       setReq({ code: r.code, sender, amount: hold.amount, status: r.status });
       setMyCode(r.code);
-      if (r.status === "issued") { await redeem(r.code); setPaid(true); setStage(3); keep(null, null, r.code); }
+      if (r.status === "issued") {
+        await redeem(r.code); setPaid(true); setStage(3);
+        keep(null, null, r.code); publish(r.code);
+      }
     } catch (e) { setErr(e.message); }
   }
 
@@ -743,7 +790,7 @@ ${brief_}
             ["01", "Расскажите о деле", "Название, чем занимаетесь, город и номер WhatsApp. Пары предложений достаточно."],
             ["02", "Смотрите готовый сайт", "Тексты, цвета, шрифты и вёрстка подбираются под ваш бизнес. Не понравилось — «Перемешать вид»."],
             ["03", "Платите, если забираете", `${PAY.kzt} ₸ через Kaspi. Пока не оплатили — на странице водяной знак.`],
-            ["04", "Выкладываете в интернет", "Скачиваете файл и получаете ссылку за полминуты. Инструкция внутри."],
+            ["04", "Сайт сразу в интернете", "Сразу после оплаты получаете рабочую ссылку — публиковать ничего не нужно."],
           ].map(([n, t, p]) => (
             <div className="ln-step" key={n}><i>{n}</i><h3>{t}</h3><p>{p}</p></div>
           ))}
@@ -1029,19 +1076,32 @@ ${brief_}
           <div className="p-stage">
             {paid && (
               <div className="p-deliver">
-                <h3>Как выложить сайт в интернет</h3>
-                <p>Файл готов. Осталось получить ссылку для Instagram или 2ГИС.</p>
-                <ol className="p-steps">
-                  <li>Нажмите «Скачать HTML» — сохранится файл index.html</li>
-                  <li>Откройте app.netlify.com/drop и перетащите файл в окно</li>
-                  <li>Через 30 секунд получите бесплатную ссылку</li>
-                  <li>Свой домен подключается там же в настройках</li>
-                </ol>
-                <div className="p-row">
-                  <button className="p-mini" type="button" onClick={() => copy("https://app.netlify.com/drop")}>
-                    Скопировать ссылку на Netlify Drop
-                  </button>
-                </div>
+                <h3>Ваш сайт уже в интернете</h3>
+                {live ? (
+                  <>
+                    <a className="p-live" href={live} target="_blank" rel="noreferrer">{live.replace(/^https?:\/\//, "")}</a>
+                    <div className="p-row" style={{ marginTop: 12 }}>
+                      <button className="p-mini" type="button" onClick={() => copy(live)}>Скопировать ссылку</button>
+                      <button className="p-mini" type="button" onClick={() => publish()} disabled={pubBusy}>
+                        {pubBusy ? "Обновляем…" : "Обновить сайт"}
+                      </button>
+                    </div>
+                    <div className="p-row">
+                      <input className="p-input" value={slug} placeholder="адрес"
+                        onChange={(e) => setSlug(toSlug(e.target.value))} aria-label="Адрес сайта" />
+                      <button className="p-mini" type="button" onClick={() => publish(null, slug)} disabled={pubBusy || slug.length < 3}>
+                        Сменить адрес
+                      </button>
+                    </div>
+                    <p className="p-note">
+                      Ссылка работает сразу — отправляйте клиентам, ставьте в Instagram и 2ГИС.
+                      После правок нажмите «Обновить сайт». Файл можно и скачать — кнопка справа вверху.
+                    </p>
+                  </>
+                ) : (
+                  <p>{pubBusy ? "Публикуем…" : "Готовим ссылку…"}</p>
+                )}
+                {pubMsg && <p className="p-note" style={{ color: "var(--coral)" }}>{pubMsg}</p>}
               </div>
             )}
 
@@ -1087,7 +1147,7 @@ ${brief_}
             ["Частые вопросы", "Раскрывающиеся ответы про запись, оплату и сроки."],
             ["Ваши фотографии", "До трёх снимков: обложка, снимок у заголовка или галерея."],
             ["Разметка для поиска", "Название, телефон, адрес и часы — в формате, который читает Google."],
-            ["Работает без интернета", "Один файл: фото внутри, ничего не подгружается со стороны."],
+            ["Готовая ссылка", "Сайт открывается сразу после оплаты. Файл тоже можно скачать и забрать себе."],
           ].map(([t, p]) => (
             <div key={t}><h3>{t}</h3><p>{p}</p></div>
           ))}

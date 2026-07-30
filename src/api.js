@@ -23,3 +23,5 @@ export const redeem = (code) => post("/api/store", { action: "redeem", code });
 export const adminCall = (pin, op, extra = {}) => post("/api/store", { action: "admin", pin, op, ...extra });
 export const saveProject = (code, payload) => post("/api/store", { action: "save", code, payload });
 export const loadProject = (code) => post("/api/store", { action: "load", code });
+export const publishSite = (code, slug, html) => post("/api/store", { action: "publish", code, slug, html });
+export const checkSlug = (code, slug) => post("/api/store", { action: "slugFree", code, slug });

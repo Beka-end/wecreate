@@ -155,6 +155,43 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true });
     }
 
+    /* ── Публикация: сайт сразу живёт по адресу ── */
+    if (action === "publish") {
+      const code = String(body.code || "").trim().toUpperCase();
+      const row = rows.find((x) => x.code === code);
+      if (!row || row.status === "pending") return res.status(403).json({ error: "Заказ не оплачен" });
+
+      let slug = String(body.slug || "").toLowerCase().replace(/[^a-z0-9-]/g, "").replace(/-+/g, "-")
+        .replace(/^-|-$/g, "").slice(0, 40);
+      if (slug.length < 3) return res.status(400).json({ error: "Адрес — минимум 3 символа: латиница, цифры, дефис" });
+
+      const html = String(body.html || "");
+      if (!html.startsWith("<!doctype html")) return res.status(400).json({ error: "Страница повреждена" });
+      if (html.length > 900000) return res.status(413).json({ error: "Сайт тяжелее 900 КБ — уменьшите число фотографий" });
+
+      const owner = await kvGet("slug:" + slug, null);
+      if (owner && owner !== code) return res.status(409).json({ error: "Такой адрес уже занят, придумайте другой" });
+
+      const prev = row.slug;
+      if (prev && prev !== slug) {
+        await kvSet("site:" + prev, "");
+        await kvSet("slug:" + prev, "");
+      }
+      await kvSet("site:" + slug, html);
+      await kvSet("slug:" + slug, code);
+      row.slug = slug;
+      row.published = now();
+      await save();
+      return res.status(200).json({ slug });
+    }
+
+    if (action === "slugFree") {
+      const slug = String(body.slug || "").toLowerCase().replace(/[^a-z0-9-]/g, "");
+      if (slug.length < 3) return res.status(200).json({ free: false });
+      const owner = await kvGet("slug:" + slug, null);
+      return res.status(200).json({ free: !owner || owner === String(body.code || "").toUpperCase() });
+    }
+
     /* ── Сохранение проекта: владелец сайта вернётся и поправит ── */
     if (action === "save") {
       const code = String(body.code || "").trim().toUpperCase();
