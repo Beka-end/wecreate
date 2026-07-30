@@ -15,57 +15,104 @@ const PAY = {
 
 const CSS2 = `
 .pro{scroll-behavior:smooth}
-.ln-nav{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;gap:18px;
-  padding:14px 26px;background:rgba(11,13,18,.78);backdrop-filter:blur(14px);border-bottom:1px solid var(--edge);flex-wrap:wrap}
-.ln-mark{font-family:'Unbounded',sans-serif;font-weight:900;font-size:17px;letter-spacing:-.02em;cursor:default;user-select:none}
-.ln-mark em{font-style:normal;color:var(--signal)}
-.ln-navR{display:flex;align-items:center;gap:18px;font-size:13px;color:var(--mist)}
-.ln-navR a{color:var(--mist);text-decoration:none}
-.ln-navR a:hover{color:var(--paper)}
-.ln-btn{background:var(--signal);color:#fff;border:none;border-radius:100px;padding:10px 20px;font-weight:700;font-size:13px;cursor:pointer}
-.ln-hero{position:relative;min-height:min(88vh,760px);display:flex;align-items:center;overflow:hidden;border-bottom:1px solid var(--edge)}
-.ln-scrim{position:absolute;inset:0;z-index:1;pointer-events:none;
-  background:radial-gradient(120% 90% at 12% 40%,rgba(11,13,18,.94) 8%,rgba(11,13,18,.5) 52%,rgba(11,13,18,.2) 100%)}
-.ln-heroIn{position:relative;z-index:2;padding:70px 26px;max-width:860px}
-.ln-kicker{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--brass);margin-bottom:22px}
-.ln-h1{font-family:'Unbounded',sans-serif;font-weight:900;font-size:clamp(38px,7.4vw,86px);line-height:.98;letter-spacing:-.035em;margin:0}
-.ln-h1 span{color:var(--signal)}
-.ln-sub{margin-top:24px;font-size:clamp(16px,2.1vw,20px);color:var(--mist);max-width:52ch;line-height:1.55}
-.ln-acts{display:flex;gap:14px;margin-top:36px;flex-wrap:wrap;align-items:center}
-.ln-cta{background:var(--signal);color:#fff;border:none;border-radius:100px;padding:17px 34px;
-  font-family:'Unbounded',sans-serif;font-weight:700;font-size:15px;cursor:pointer;transition:transform .18s}
-.ln-cta:hover{transform:translateY(-3px)}
-.ln-ghost{color:var(--paper);text-decoration:none;font-size:14px;border-bottom:1px solid var(--edge);padding-bottom:3px}
-.ln-meta{display:flex;gap:28px;margin-top:44px;flex-wrap:wrap;font-family:'JetBrains Mono',monospace;font-size:11px;
-  text-transform:uppercase;letter-spacing:.12em;color:#5B6474}
-.ln-meta b{color:var(--paper);font-family:'Unbounded',sans-serif;font-size:19px;display:block;margin-bottom:5px;letter-spacing:-.02em}
-.ln-sec{padding:78px 26px;border-bottom:1px solid var(--edge);max-width:1180px;margin:0 auto}
-.ln-secHead{display:flex;align-items:baseline;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:40px}
-.ln-h2{font-family:'Unbounded',sans-serif;font-weight:700;font-size:clamp(22px,3.4vw,34px);letter-spacing:-.025em;margin:0}
-.ln-hint{font-size:13px;color:#5B6474;max-width:34ch}
+
+/* ── Навигация ─────────────────────────────────────────────────── */
+.ln-nav{position:sticky;top:0;z-index:60;display:flex;align-items:center;justify-content:space-between;gap:20px;
+  padding:16px 32px;background:rgba(7,7,10,.72);backdrop-filter:blur(20px) saturate(1.4);
+  border-bottom:1px solid var(--line);flex-wrap:wrap}
+.ln-mark{font-family:'Unbounded',sans-serif;font-weight:900;font-size:16px;letter-spacing:-.03em;
+  cursor:default;user-select:none}
+.ln-mark em{font-style:normal;background:linear-gradient(100deg,var(--a1),var(--a2));
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+.ln-navR{display:flex;align-items:center;gap:22px;font-size:13.5px;color:var(--dim)}
+.ln-navR a{color:var(--dim);text-decoration:none;transition:color .15s}
+.ln-navR a:hover{color:var(--text)}
+.ln-btn{border:none;border-radius:100px;padding:11px 22px;font-weight:600;font-size:13px;cursor:pointer;color:#fff;
+  font-family:'Inter Tight',sans-serif;background:linear-gradient(120deg,var(--a1),var(--a2));
+  box-shadow:0 6px 20px rgba(108,92,231,.3);transition:transform .18s}
+.ln-btn:hover{transform:translateY(-2px)}
+
+/* ── Первый экран ──────────────────────────────────────────────── */
+.ln-hero{position:relative;min-height:min(94vh,880px);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;overflow:hidden;text-align:center;padding:90px 26px 70px}
+.ln-glow{position:absolute;z-index:1;width:min(1100px,140vw);aspect-ratio:1;border-radius:50%;top:-40%;
+  background:radial-gradient(circle at 50% 50%,rgba(108,92,231,.34),rgba(18,207,176,.12) 42%,transparent 68%);
+  filter:blur(30px);pointer-events:none}
+.ln-vignette{position:absolute;inset:0;z-index:2;pointer-events:none;
+  background:radial-gradient(85% 70% at 50% 42%,transparent 30%,rgba(7,7,10,.72) 78%,var(--void) 100%)}
+.ln-heroIn{position:relative;z-index:3;max-width:920px}
+.ln-badge{display:inline-flex;align-items:center;gap:9px;border:1px solid var(--line2);border-radius:100px;
+  padding:7px 16px 7px 12px;font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--dim);background:var(--glass);margin-bottom:30px}
+.ln-dot{width:6px;height:6px;border-radius:50%;background:var(--a2);box-shadow:0 0 10px var(--a2);
+  animation:pulse 2.4s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.35}}
+.ln-h1{font-family:'Inter Tight',sans-serif;font-weight:600;font-size:clamp(40px,8.2vw,94px);line-height:1.02;
+  letter-spacing:-.045em;margin:0}
+.ln-h1 span{background:linear-gradient(100deg,#B9AEFF,var(--a2));-webkit-background-clip:text;
+  background-clip:text;color:transparent}
+.ln-sub{margin:28px auto 0;font-size:clamp(16px,1.9vw,19.5px);color:var(--dim);max-width:60ch;line-height:1.62}
+.ln-acts{display:flex;gap:16px;margin-top:40px;flex-wrap:wrap;align-items:center;justify-content:center}
+.ln-cta{border:none;border-radius:100px;padding:19px 42px;cursor:pointer;color:#fff;
+  font-family:'Inter Tight',sans-serif;font-weight:600;font-size:16px;letter-spacing:-.01em;
+  background:linear-gradient(120deg,var(--a1),#8E7BFF 52%,var(--a2));
+  box-shadow:0 14px 44px rgba(108,92,231,.38);transition:transform .2s,box-shadow .2s}
+.ln-cta:hover{transform:translateY(-3px);box-shadow:0 20px 54px rgba(108,92,231,.48)}
+.ln-ghost{color:var(--dim);text-decoration:none;font-size:14.5px;padding:18px 10px;transition:color .15s}
+.ln-ghost:hover{color:var(--text)}
+.ln-meta{display:flex;gap:44px;margin-top:60px;flex-wrap:wrap;justify-content:center}
+.ln-meta div{text-align:center}
+.ln-meta b{display:block;font-family:'Inter Tight',sans-serif;font-weight:600;font-size:26px;
+  letter-spacing:-.035em;margin-bottom:7px}
+.ln-meta span{font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--faint)}
+
+/* ── Секции ────────────────────────────────────────────────────── */
+.ln-sec{padding:100px 32px;max-width:1240px;margin:0 auto}
+.ln-sec+.ln-sec{border-top:1px solid var(--line)}
+.ln-secHead{margin-bottom:52px;max-width:640px}
+.ln-tag{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--a2);margin:0 0 16px}
+.ln-h2{font-family:'Inter Tight',sans-serif;font-weight:600;font-size:clamp(26px,4vw,44px);
+  letter-spacing:-.04em;margin:0;line-height:1.08}
+.ln-hint{font-size:15px;color:var(--dim);margin:16px 0 0;line-height:1.6}
 .ln-steps{display:grid;gap:0}
-.ln-step{display:grid;grid-template-columns:80px 1fr 1.3fr;gap:24px;padding:26px 0;border-top:1px solid var(--edge);align-items:baseline}
-.ln-step:last-child{border-bottom:1px solid var(--edge)}
-.ln-step i{font-family:'Unbounded',sans-serif;font-style:normal;font-weight:900;font-size:26px;color:var(--signal);letter-spacing:-.03em}
-.ln-step h3{font-family:'Unbounded',sans-serif;font-weight:400;font-size:19px;margin:0;letter-spacing:-.02em}
-.ln-step p{color:var(--mist);font-size:15px;margin:0}
-@media (max-width:760px){.ln-step{grid-template-columns:44px 1fr;gap:14px}.ln-step p{grid-column:2}}
-.ln-priceRow{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center}
-@media (max-width:760px){.ln-priceRow{grid-template-columns:1fr}}
-.ln-big{font-family:'Unbounded',sans-serif;font-weight:900;font-size:clamp(52px,10vw,104px);line-height:.9;letter-spacing:-.04em}
-.ln-big small{display:block;font-family:'Golos Text',sans-serif;font-weight:400;font-size:15px;color:var(--mist);letter-spacing:0;margin-top:14px}
-.ln-inc{list-style:none;padding:0;margin:0;display:grid;gap:12px}
-.ln-inc li{padding-left:26px;position:relative;color:var(--mist);font-size:15px}
-.ln-inc li:before{content:"";position:absolute;left:0;top:10px;width:13px;height:2px;background:var(--brass)}
-.ln-foot{padding:40px 26px 60px;max-width:1180px;margin:0 auto;display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap;font-size:13px;color:#5B6474}
-.p-queue{display:grid;gap:10px;margin-top:14px}
-.p-wait{border:1px solid var(--brass);border-radius:6px;padding:14px 16px;background:rgba(201,162,39,.08);font-size:13px;color:var(--paper)}
-.p-wait b{display:block;font-family:'JetBrains Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:var(--brass);margin-bottom:6px}
-.p-toggle{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--mist);cursor:pointer;margin-top:6px}
-.p-toggle input{width:16px;height:16px;accent-color:#C9A227}
-.p-flag{color:var(--signal)}
-.p-act{border:1px solid var(--edge);background:transparent;color:var(--paper);border-radius:4px;padding:5px 10px;cursor:pointer;font-size:11px;font-family:'JetBrains Mono',monospace}
-.p-act:hover{border-color:var(--brass)}
+.ln-step{display:grid;grid-template-columns:56px 1.1fr 1.4fr;gap:28px;padding:30px 0;
+  border-top:1px solid var(--line);align-items:baseline}
+.ln-step:last-child{border-bottom:1px solid var(--line)}
+.ln-step i{font-family:'JetBrains Mono',monospace;font-style:normal;font-size:12px;letter-spacing:.1em;
+  color:var(--a2);padding-top:5px}
+.ln-step h3{font-family:'Inter Tight',sans-serif;font-weight:500;font-size:21px;margin:0;letter-spacing:-.025em}
+.ln-step p{color:var(--dim);font-size:14.5px;margin:0;line-height:1.6}
+@media (max-width:800px){.ln-step{grid-template-columns:34px 1fr;gap:14px}.ln-step p{grid-column:2}}
+
+/* рамка «браузера» вокруг станка */
+.ln-frame{border:1px solid var(--line);border-radius:20px;overflow:hidden;background:var(--deep);
+  box-shadow:0 50px 120px rgba(0,0,0,.6)}
+.ln-bar{display:flex;align-items:center;gap:8px;padding:14px 18px;border-bottom:1px solid var(--line);
+  background:var(--surface)}
+.ln-bar i{width:10px;height:10px;border-radius:50%;background:#2A2A34;display:block}
+.ln-bar span{margin-left:12px;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--faint)}
+
+/* ── Цена ──────────────────────────────────────────────────────── */
+.ln-priceRow{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center}
+@media (max-width:800px){.ln-priceRow{grid-template-columns:1fr;gap:36px}}
+.ln-big{font-family:'Inter Tight',sans-serif;font-weight:600;font-size:clamp(60px,11vw,124px);line-height:.88;
+  letter-spacing:-.055em;background:linear-gradient(100deg,#fff 20%,#B9AEFF 70%,var(--a2));
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+.ln-big small{display:block;font-size:15px;font-weight:400;color:var(--dim);letter-spacing:0;margin-top:22px;
+  -webkit-text-fill-color:var(--dim);line-height:1.6}
+.ln-inc{list-style:none;padding:0;margin:0;display:grid;gap:16px}
+.ln-inc li{padding-left:30px;position:relative;color:var(--dim);font-size:15px;line-height:1.5}
+.ln-inc li:before{content:"";position:absolute;left:0;top:8px;width:14px;height:14px;border-radius:50%;
+  border:1px solid var(--a2);background:radial-gradient(circle,var(--a2) 0 3px,transparent 4px)}
+.ln-foot{padding:44px 32px 70px;max-width:1240px;margin:0 auto;display:flex;justify-content:space-between;
+  gap:20px;flex-wrap:wrap;font-size:13px;color:var(--faint);border-top:1px solid var(--line)}
+
+/* появление при прокрутке */
+.rev{opacity:0;transform:translateY(26px);transition:opacity .8s cubic-bezier(.2,.7,.2,1),transform .8s cubic-bezier(.2,.7,.2,1)}
+.rev.in{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){.rev{opacity:1;transform:none}}
 `;
 
 /* ─── Кабинет: PIN уходит на сервер, в браузере его нет ────────────── */
@@ -137,7 +184,7 @@ function Admin({ onExit }) {
           {pending.map((r) => (
             <tr key={r.code}>
               <td className={Number(r.amount) < PAY.kzt ? "p-flag" : ""}>
-                <b style={{ fontSize: 13, color: Number(r.amount) < PAY.kzt ? "#FF4D2E" : "#C9A227" }}>{r.amount || "—"} ₸</b>
+                <b style={{ fontSize: 13, color: Number(r.amount) < PAY.kzt ? "var(--hot)" : "var(--gold)" }}>{r.amount || "—"} ₸</b>
               </td>
               <td>{r.sender || "—"}</td>
               <td>{r.at}</td><td>{r.code}</td>
@@ -147,7 +194,7 @@ function Admin({ onExit }) {
               </td>
             </tr>
           ))}
-          {!pending.length && <tr><td colSpan="5" style={{ color: "#5B6474" }}>Заявок нет</td></tr>}
+          {!pending.length && <tr><td colSpan="5" style={{ color: "var(--faint)" }}>Заявок нет</td></tr>}
         </tbody>
       </table>
 
@@ -163,7 +210,7 @@ function Admin({ onExit }) {
               <td><button className="p-exit" type="button" onClick={() => op("remove", { code: r.code })}>удалить</button></td>
             </tr>
           ))}
-          {!done.length && <tr><td colSpan="5" style={{ color: "#5B6474" }}>Пока пусто</td></tr>}
+          {!done.length && <tr><td colSpan="5" style={{ color: "var(--faint)" }}>Пока пусто</td></tr>}
         </tbody>
       </table>
 
@@ -175,6 +222,23 @@ function Admin({ onExit }) {
 }
 
 const STAGES = ["Текст", "Вёрстка", "Готово", "Оплачено"];
+
+/* Плавное появление секций при прокрутке */
+function useReveal() {
+  useEffect(() => {
+    const els = document.querySelectorAll(".rev");
+    if (!("IntersectionObserver" in window)) {
+      els.forEach((e) => e.classList.add("in"));
+      return;
+    }
+    const io = new IntersectionObserver(
+      (entries) => entries.forEach((en) => { if (en.isIntersecting) { en.target.classList.add("in"); io.unobserve(en.target); } }),
+      { rootMargin: "-60px" }
+    );
+    els.forEach((e) => io.observe(e));
+    return () => io.disconnect();
+  }, []);
+}
 
 export default function App() {
   const [form, setForm] = useState({
@@ -202,6 +266,7 @@ export default function App() {
   const linkRef = useRef(null);
   const clicks = useRef({ n: 0, t: 0 });
   const seen = useRef(new Set());
+  useReveal();
 
   useEffect(() => {
     const check = () => setAdmin(window.location.hash === "#kabinet");
@@ -306,6 +371,7 @@ export default function App() {
   return (
     <div className="pro">
       <style dangerouslySetInnerHTML={{ __html: CSS + CSS2 }} />
+      <div className="grain" />
 
       <nav className="ln-nav">
         <div className="ln-mark" onClick={tapLogo}>WE<em>CREATE</em></div>
@@ -317,31 +383,33 @@ export default function App() {
       </nav>
 
       <header className="ln-hero">
+        <div className="ln-glow" />
         <Hero3D />
-        <div className="ln-scrim" />
+        <div className="ln-vignette" />
         <div className="ln-heroIn">
-          <p className="ln-kicker">Сайты для малого бизнеса Казахстана</p>
-          <h1 className="ln-h1">Сайт вашему делу<br />за <span>двадцать секунд</span></h1>
+          <span className="ln-badge"><i className="ln-dot" />предпросмотр бесплатно</span>
+          <h1 className="ln-h1">Сайт вашему делу<br /><span>за двадцать секунд</span></h1>
           <p className="ln-sub">
-            Опишите бизнес тремя строчками. WeCreate напишет тексты, подберёт шрифты и цвета,
-            соберёт страницу с кнопкой WhatsApp. Смотрите бесплатно — платите, только если понравилось.
+            Опишите бизнес тремя строчками. Тексты, шрифты, цвета и вёрстка подберутся сами —
+            получите живую страницу с кнопкой WhatsApp. Платите только если забираете.
           </p>
           <div className="ln-acts">
-            <button className="ln-cta" type="button" onClick={toTool}>Собрать бесплатно</button>
-            <a className="ln-ghost" href="#how">Сначала посмотреть, как это работает</a>
+            <button className="ln-cta" type="button" onClick={toTool}>Собрать сайт</button>
+            <a className="ln-ghost" href="#how">Как это работает →</a>
           </div>
           <div className="ln-meta">
-            <div><b>20 сек</b>от описания до готовой страницы</div>
-            <div><b>{PAY.kzt} ₸</b>один раз, без подписки</div>
-            <div><b>0 ₸</b>посмотреть и передумать</div>
+            <div><b>20 сек</b><span>до готовой страницы</span></div>
+            <div><b>{PAY.kzt} ₸</b><span>один раз, без подписки</span></div>
+            <div><b>500 000+</b><span>вариантов дизайна</span></div>
           </div>
         </div>
       </header>
 
-      <section className="ln-sec" id="how">
+      <section className="ln-sec rev" id="how">
         <div className="ln-secHead">
-          <h2 className="ln-h2">Четыре шага</h2>
-          <p className="ln-hint">Ни регистрации, ни паролей. Оплата в конце, когда сайт уже перед глазами.</p>
+          <p className="ln-tag">как это работает</p>
+          <h2 className="ln-h2">Четыре шага и ни одного пароля</h2>
+          <p className="ln-hint">Без регистрации и подписок. Оплата в самом конце, когда сайт уже перед глазами.</p>
         </div>
         <div className="ln-steps">
           {[
@@ -355,13 +423,16 @@ export default function App() {
         </div>
       </section>
 
-      <section className="ln-sec" id="tool">
+      <section className="ln-sec rev" id="tool">
         <div className="ln-secHead">
-          <h2 className="ln-h2">Конструктор</h2>
+          <p className="ln-tag">конструктор</p>
+          <h2 className="ln-h2">Попробуйте прямо здесь</h2>
           <p className="ln-hint">Слева — данные о бизнесе. Справа — то, что увидят ваши клиенты.</p>
         </div>
 
-        <div className="p-grid" style={{ border: "1px solid var(--edge)", borderRadius: 8, overflow: "hidden" }}>
+        <div className="ln-frame">
+        <div className="ln-bar"><i /><i /><i /><span>предпросмотр вашего сайта</span></div>
+        <div className="p-grid">
           <div className="p-panel">
             <p className="p-eyebrow">Данные бизнеса</p>
             <div className="p-field">
@@ -423,7 +494,7 @@ export default function App() {
                 <div className="p-price">{hold ? hold.amount : PAY.kzt} ₸<small>≈ ${PAY.usd}</small></div>
                 {hold ? (
                   <p className="p-note" style={{ margin: "8px 0 0" }}>
-                    Сумма для вас <b style={{ color: "#C9A227" }}>{hold.amount} ₸</b> — впишите её в Kaspi
+                    Сумма для вас <b style={{ color: "var(--gold)" }}>{hold.amount} ₸</b> — впишите её в Kaspi
                     до последней цифры. По этой сумме ваш платёж и найдут: у каждого заказа она своя.
                   </p>
                 ) : (
@@ -507,9 +578,14 @@ export default function App() {
             <a ref={linkRef} style={{ display: "none" }} href="#d">скачать</a>
           </div>
         </div>
+        </div>
       </section>
 
-      <section className="ln-sec" id="price">
+      <section className="ln-sec rev" id="price">
+        <div className="ln-secHead">
+          <p className="ln-tag">цена</p>
+          <h2 className="ln-h2">Один платёж, дальше сайт ваш</h2>
+        </div>
         <div className="ln-priceRow">
           <div className="ln-big">{PAY.kzt} ₸<small>один платёж через Kaspi · без подписки</small></div>
           <ul className="ln-inc">
