@@ -18,109 +18,114 @@ const CSS2 = `
 
 /* ── Навигация ─────────────────────────────────────────────────── */
 .ln-nav{position:sticky;top:0;z-index:60;display:flex;align-items:center;justify-content:space-between;gap:20px;
-  padding:16px 34px;background:rgba(251,245,236,.86);backdrop-filter:blur(16px) saturate(1.2);
+  padding:16px 34px;background:rgba(251,253,253,.82);backdrop-filter:blur(18px) saturate(1.3);
   border-bottom:1px solid var(--line);flex-wrap:wrap}
-.ln-mark{font-family:'Lora',serif;font-weight:600;font-size:20px;letter-spacing:-.01em;cursor:default;user-select:none}
-.ln-mark em{font-style:italic;color:var(--crema)}
+.ln-mark{font-family:'Playfair Display',serif;font-weight:600;font-size:21px;letter-spacing:-.01em;
+  cursor:default;user-select:none;color:var(--abyss)}
+.ln-mark em{font-style:italic;color:var(--lagoon)}
 .ln-navR{display:flex;align-items:center;gap:24px;font-size:14px;color:var(--dim)}
 .ln-navR a{color:var(--dim);text-decoration:none;transition:color .15s}
-.ln-navR a:hover{color:var(--espresso)}
-.ln-btn{border:none;border-radius:100px;padding:11px 22px;font-weight:600;font-size:13.5px;cursor:pointer;
-  color:#FFF9F0;background:var(--cocoa);box-shadow:0 6px 16px rgba(107,74,52,.24);transition:transform .18s}
+.ln-navR a:hover{color:var(--abyss)}
+.ln-btn{border:none;border-radius:100px;padding:11px 22px;font-weight:700;font-size:13.5px;cursor:pointer;color:#fff;
+  background:linear-gradient(115deg,var(--lagoon),#3FD0C0);box-shadow:0 8px 20px rgba(47,182,174,.32);
+  transition:transform .18s}
 .ln-btn:hover{transform:translateY(-2px)}
 
-/* ── Первый экран ──────────────────────────────────────────────── */
-.ln-hero{position:relative;min-height:min(92vh,860px);display:grid;grid-template-columns:1.05fr .95fr;
-  align-items:center;gap:20px;overflow:hidden;padding:70px 34px}
-@media (max-width:900px){.ln-hero{grid-template-columns:1fr;padding-top:40px;text-align:center}}
-.ln-glow{position:absolute;z-index:0;width:min(900px,120vw);aspect-ratio:1;border-radius:50%;right:-14%;top:-24%;
-  background:radial-gradient(circle,rgba(200,138,74,.24),rgba(240,227,210,.4) 46%,transparent 70%);filter:blur(20px);
-  pointer-events:none}
-.ln-heroIn{position:relative;z-index:3;max-width:620px}
+/* ── Первый экран: текст над водой ─────────────────────────────── */
+.ln-hero{position:relative;min-height:min(96vh,900px);display:flex;flex-direction:column;align-items:center;
+  overflow:hidden;text-align:center;padding:96px 26px 0;
+  background:linear-gradient(180deg,#FBFDFD 0%,#EAF7F6 42%,#D8F1EE 100%)}
+.ln-sunhalo{position:absolute;z-index:1;width:min(760px,110vw);aspect-ratio:1;border-radius:50%;top:-32%;
+  background:radial-gradient(circle,rgba(255,196,107,.32),rgba(255,246,226,.16) 44%,transparent 70%);
+  filter:blur(18px);pointer-events:none}
+.ln-water{position:absolute;left:0;right:0;bottom:0;height:62%;z-index:1}
+.ln-waterFade{position:absolute;left:0;right:0;bottom:0;height:64%;z-index:2;pointer-events:none;
+  background:linear-gradient(180deg,rgba(216,241,238,.9) 0%,rgba(216,241,238,0) 22%)}
+.ln-heroIn{position:relative;z-index:4;max-width:880px}
 .ln-badge{display:inline-flex;align-items:center;gap:9px;border:1px solid var(--line2);border-radius:100px;
-  padding:8px 18px 8px 13px;font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--cocoa);
-  background:var(--paper);margin-bottom:28px;font-weight:600}
-.ln-dot{width:7px;height:7px;border-radius:50%;background:var(--sage);animation:pulse 2.6s ease-in-out infinite}
+  padding:8px 18px 8px 13px;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--deep);
+  background:rgba(255,255,255,.72);margin-bottom:28px;font-weight:700}
+.ln-dot{width:7px;height:7px;border-radius:50%;background:var(--lagoon);animation:pulse 2.6s ease-in-out infinite}
 @keyframes pulse{50%{opacity:.35}}
-.ln-h1{font-family:'Lora',serif;font-weight:600;font-size:clamp(38px,6.4vw,74px);line-height:1.06;
-  letter-spacing:-.025em;margin:0}
-.ln-h1 em{font-style:italic;color:var(--crema)}
-.ln-sub{margin:26px 0 0;font-size:clamp(16px,1.8vw,19px);color:var(--dim);max-width:52ch;line-height:1.68}
-@media (max-width:900px){.ln-sub{margin-left:auto;margin-right:auto}}
-.ln-acts{display:flex;gap:16px;margin-top:36px;flex-wrap:wrap;align-items:center}
-@media (max-width:900px){.ln-acts{justify-content:center}}
-.ln-cta{border:none;border-radius:100px;padding:19px 40px;cursor:pointer;color:#FFF9F0;font-family:'Lora',serif;
-  font-weight:600;font-size:17px;background:var(--cocoa);box-shadow:0 14px 32px rgba(107,74,52,.28);
-  transition:transform .2s,box-shadow .2s,background .2s}
-.ln-cta:hover{transform:translateY(-3px);background:#5B3E2B;box-shadow:0 20px 42px rgba(107,74,52,.34)}
-.ln-ghost{color:var(--cocoa);text-decoration:none;font-size:15px;padding:18px 6px;border-bottom:1px solid var(--line2)}
-.ln-ghost:hover{border-color:var(--crema)}
-.ln-meta{display:flex;gap:38px;margin-top:52px;flex-wrap:wrap}
-@media (max-width:900px){.ln-meta{justify-content:center}}
-.ln-meta b{display:block;font-family:'Lora',serif;font-weight:600;font-size:27px;margin-bottom:6px}
-.ln-meta span{font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:var(--faint);font-weight:600}
-.ln-cupWrap{position:relative;z-index:2;height:min(70vh,560px);min-height:340px}
-@media (max-width:900px){.ln-cupWrap{height:44vh;order:-1}}
+.ln-h1{font-family:'Playfair Display',serif;font-weight:600;font-size:clamp(40px,7.4vw,88px);line-height:1.04;
+  letter-spacing:-.025em;margin:0;color:var(--abyss)}
+.ln-h1 em{font-style:italic;color:var(--lagoon)}
+.ln-sub{margin:26px auto 0;font-size:clamp(16px,1.9vw,19.5px);color:var(--dim);max-width:56ch;line-height:1.68}
+.ln-acts{display:flex;gap:16px;margin-top:38px;flex-wrap:wrap;align-items:center;justify-content:center}
+.ln-cta{border:none;border-radius:100px;padding:19px 42px;cursor:pointer;color:#fff;font-weight:700;font-size:16.5px;
+  background:linear-gradient(115deg,var(--lagoon),#3FD0C0 58%,var(--shallow));
+  box-shadow:0 16px 40px rgba(47,182,174,.36);transition:transform .2s,box-shadow .2s}
+.ln-cta:hover{transform:translateY(-3px);box-shadow:0 22px 50px rgba(47,182,174,.44)}
+.ln-ghost{color:var(--deep);text-decoration:none;font-size:15px;padding:18px 8px;border-bottom:1px solid var(--line2)}
+.ln-ghost:hover{border-color:var(--lagoon)}
+.ln-meta{display:flex;gap:44px;margin-top:52px;flex-wrap:wrap;justify-content:center;padding-bottom:70px}
+.ln-meta div{text-align:center}
+.ln-meta b{display:block;font-family:'Playfair Display',serif;font-weight:600;font-size:28px;margin-bottom:6px;
+  color:var(--abyss)}
+.ln-meta span{font-size:10.5px;text-transform:uppercase;letter-spacing:.16em;color:var(--faint);font-weight:700}
 
 /* ── Секции ────────────────────────────────────────────────────── */
-.ln-sec{padding:96px 34px;max-width:1200px;margin:0 auto;position:relative}
+.ln-sec{padding:96px 34px;max-width:1220px;margin:0 auto;position:relative}
 .ln-sec+.ln-sec{border-top:1px solid var(--line)}
 .ln-secHead{margin-bottom:50px;max-width:620px;position:relative;z-index:2}
-.ln-tag{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--crema);margin:0 0 14px;font-weight:700}
-.ln-h2{font-family:'Lora',serif;font-weight:600;font-size:clamp(26px,3.6vw,42px);letter-spacing:-.02em;margin:0;line-height:1.14}
+.ln-tag{font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--lagoon);margin:0 0 14px;font-weight:800}
+.ln-h2{font-family:'Playfair Display',serif;font-weight:600;font-size:clamp(27px,3.8vw,44px);letter-spacing:-.02em;
+  margin:0;line-height:1.12;color:var(--abyss)}
 .ln-hint{font-size:15.5px;color:var(--dim);margin:16px 0 0;line-height:1.65}
 .ln-steps{display:grid;gap:0;position:relative;z-index:2}
 .ln-step{display:grid;grid-template-columns:58px 1.1fr 1.4fr;gap:28px;padding:30px 0;border-top:1px solid var(--line);
   align-items:baseline}
 .ln-step:last-child{border-bottom:1px solid var(--line)}
-.ln-step i{font-family:'Lora',serif;font-style:italic;font-size:22px;color:var(--crema)}
-.ln-step h3{font-family:'Lora',serif;font-weight:600;font-size:21px;margin:0}
+.ln-step i{font-family:'Playfair Display',serif;font-style:italic;font-size:24px;color:var(--lagoon)}
+.ln-step h3{font-family:'Playfair Display',serif;font-weight:600;font-size:21px;margin:0;color:var(--abyss)}
 .ln-step p{color:var(--dim);font-size:15px;margin:0;line-height:1.65}
 @media (max-width:800px){.ln-step{grid-template-columns:34px 1fr;gap:14px}.ln-step p{grid-column:2}}
 
-/* кофейные круги вместо плиток */
+/* блики-отсветы на фоне секций */
 .orbs{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0}
-.orb{position:absolute;border-radius:50%;border:2px solid rgba(150,105,66,.16);
-  box-shadow:inset 0 0 0 6px rgba(150,105,66,.05);animation:sway 26s ease-in-out infinite}
-.orb:nth-child(2){animation-duration:34s;animation-delay:-8s}
+.orb{position:absolute;border-radius:50%;filter:blur(42px);opacity:.55;
+  background:radial-gradient(circle,rgba(143,228,220,.75),rgba(143,228,220,0) 70%);
+  animation:drift 26s ease-in-out infinite}
+.orb:nth-child(2){animation-duration:34s;animation-delay:-8s;
+  background:radial-gradient(circle,rgba(255,196,107,.5),rgba(255,196,107,0) 70%)}
 .orb:nth-child(3){animation-duration:30s;animation-delay:-15s}
 .orb:nth-child(4){animation-duration:38s;animation-delay:-4s}
-@keyframes sway{50%{transform:translate3d(1.6vw,-2.4vh,0) rotate(8deg)}}
+@keyframes drift{50%{transform:translate3d(3vw,-3vh,0) scale(1.12)}}
 
-/* рамка-поднос */
+/* рамка конструктора */
 .ln-scene{perspective:1500px;perspective-origin:50% 30%}
-.ln-frame{position:relative;border:1px solid var(--line);border-radius:30px;overflow:hidden;background:var(--paper);
-  box-shadow:0 40px 90px rgba(90,66,48,.2);transform-style:preserve-3d;
+.ln-frame{position:relative;border:1px solid var(--line);border-radius:30px;overflow:hidden;background:var(--shell);
+  box-shadow:0 44px 100px rgba(18,112,126,.2);transform-style:preserve-3d;
   transition:transform .5s cubic-bezier(.2,.8,.2,1);will-change:transform}
 .ln-bar{display:flex;align-items:center;gap:8px;padding:15px 20px;border-bottom:1px solid var(--line);
-  background:var(--latte)}
-.ln-bar i{width:11px;height:11px;border-radius:50%;background:var(--sand);display:block}
+  background:var(--mist)}
+.ln-bar i{width:11px;height:11px;border-radius:50%;background:#D6E6E7;display:block}
 .ln-bar span{margin-left:12px;font-size:11.5px;color:var(--dim);font-weight:600}
-.ln-status{margin-left:auto!important;display:flex;align-items:center;gap:8px;letter-spacing:.12em;text-transform:uppercase}
-.ln-status .ln-dot{width:7px;height:7px;border-radius:50%;background:var(--sage)}
+.ln-status{margin-left:auto!important;display:flex;align-items:center;gap:8px;letter-spacing:.14em;text-transform:uppercase}
+.ln-status .ln-dot{width:7px;height:7px;border-radius:50%;background:var(--lagoon)}
+
+/* волна-разделитель и бегущая строка */
+.ln-ticker{border-top:1px solid var(--line);border-bottom:1px solid var(--line);overflow:hidden;padding:18px 0;
+  background:linear-gradient(180deg,#EAF7F6,#FBFDFD)}
+.ln-ticker>div{display:flex;width:max-content;animation:slide 38s linear infinite}
+.ln-ticker span{font-family:'Playfair Display',serif;font-style:italic;font-size:19px;color:var(--deep);
+  white-space:nowrap;padding-right:28px}
+.ln-ticker em{font-style:normal;color:var(--lagoon)}
+@keyframes slide{to{transform:translateX(-50%)}}
 
 /* ── Цена ──────────────────────────────────────────────────────── */
 .ln-priceRow{display:grid;grid-template-columns:1fr 1fr;gap:54px;align-items:center;position:relative;z-index:2}
 @media (max-width:800px){.ln-priceRow{grid-template-columns:1fr;gap:34px}}
-.ln-big{font-family:'Lora',serif;font-weight:600;font-size:clamp(62px,10vw,116px);line-height:.92;
-  letter-spacing:-.03em;color:var(--espresso)}
+.ln-big{font-family:'Playfair Display',serif;font-weight:600;font-size:clamp(62px,10.5vw,120px);line-height:.92;
+  letter-spacing:-.03em;color:var(--abyss)}
 .ln-big small{display:block;font-family:'Manrope',sans-serif;font-size:15px;font-weight:400;color:var(--dim);
   letter-spacing:0;margin-top:22px;line-height:1.65}
 .ln-inc{list-style:none;padding:0;margin:0;display:grid;gap:16px}
-.ln-inc li{padding-left:32px;position:relative;color:var(--cocoa);font-size:15.5px;line-height:1.55}
-.ln-inc li:before{content:"";position:absolute;left:0;top:6px;width:15px;height:15px;border-radius:50%;
-  border:1.5px solid var(--crema);background:radial-gradient(circle,var(--crema) 0 3px,transparent 4px)}
-.ln-foot{padding:44px 34px 72px;max-width:1200px;margin:0 auto;display:flex;justify-content:space-between;gap:20px;
+.ln-inc li{padding-left:32px;position:relative;color:var(--deep);font-size:15.5px;line-height:1.55}
+.ln-inc li:before{content:"";position:absolute;left:0;top:7px;width:16px;height:16px;border-radius:50%;
+  border:1.5px solid var(--lagoon);background:radial-gradient(circle,var(--shallow) 0 4px,transparent 5px)}
+.ln-foot{padding:44px 34px 72px;max-width:1220px;margin:0 auto;display:flex;justify-content:space-between;gap:20px;
   flex-wrap:wrap;font-size:13.5px;color:var(--faint);border-top:1px solid var(--line)}
-
-/* бегущая строка — как надпись на витрине */
-.ln-ticker{border-top:1px solid var(--line);border-bottom:1px solid var(--line);overflow:hidden;padding:18px 0;
-  background:var(--latte)}
-.ln-ticker>div{display:flex;width:max-content;animation:slide 40s linear infinite}
-.ln-ticker span{font-family:'Lora',serif;font-style:italic;font-size:19px;color:var(--cocoa);white-space:nowrap;
-  padding-right:28px}
-.ln-ticker em{font-style:normal;color:var(--crema)}
-@keyframes slide{to{transform:translateX(-50%)}}
 
 /* появление при прокрутке */
 .rev{opacity:0;transform:translateY(24px);transition:opacity .8s cubic-bezier(.2,.7,.2,1),transform .8s cubic-bezier(.2,.7,.2,1)}
@@ -197,7 +202,7 @@ function Admin({ onExit }) {
           {pending.map((r) => (
             <tr key={r.code}>
               <td className={Number(r.amount) < PAY.kzt ? "p-flag" : ""}>
-                <b style={{ fontSize: 13, color: Number(r.amount) < PAY.kzt ? "var(--berry)" : "var(--crema)" }}>{r.amount || "—"} ₸</b>
+                <b style={{ fontSize: 13, color: Number(r.amount) < PAY.kzt ? "var(--coral)" : "var(--sun)" }}>{r.amount || "—"} ₸</b>
               </td>
               <td>{r.sender || "—"}</td>
               <td>{r.at}</td><td>{r.code}</td>
@@ -428,44 +433,45 @@ export default function App() {
       </nav>
 
       <header className="ln-hero">
-        <div className="ln-glow" />
+        <div className="ln-sunhalo" />
+        <div className="ln-water"><Hero3D /></div>
+        <div className="ln-waterFade" />
         <div className="ln-heroIn">
-          <span className="ln-badge"><i className="ln-dot" />первая чашка за наш счёт</span>
+          <span className="ln-badge"><i className="ln-dot" />предпросмотр бесплатно</span>
           <h1 className="ln-h1">Сайт вашему делу<br />за <em>двадцать секунд</em></h1>
           <p className="ln-sub">
-            Расскажите о своём деле парой строк — пока остывает кофе, соберётся живая страница
-            с текстами, цветами и кнопкой WhatsApp. Смотреть бесплатно, платить — только если забираете.
+            Опишите бизнес тремя строчками. Тексты, шрифты, цвета и вёрстка подберутся сами —
+            получите живую страницу с кнопкой WhatsApp. Платите, только если забираете.
           </p>
           <div className="ln-acts">
-            <button className="ln-cta" type="button" onClick={toTool}>Заварить сайт</button>
+            <button className="ln-cta" type="button" onClick={toTool}>Собрать сайт</button>
             <a className="ln-ghost" href="#how">Как это работает</a>
           </div>
           <div className="ln-meta">
             <div><b><CountUp to={20} suffix=" сек" /></b><span>до готовой страницы</span></div>
             <div><b><CountUp to={PAY.kzt} suffix=" ₸" /></b><span>один раз, без подписки</span></div>
-            <div><b><CountUp to={COMBOS} /></b><span>вариантов оформления</span></div>
+            <div><b><CountUp to={COMBOS} /></b><span>вариантов дизайна</span></div>
           </div>
         </div>
-        <div className="ln-cupWrap"><Hero3D /></div>
       </header>
 
       <section className="ln-sec rev" id="how">
         <div className="orbs" aria-hidden="true">
-          <span className="orb" style={{ width: 220, height: 220, left: "-6%", top: "12%" }} />
-          <span className="orb" style={{ width: 120, height: 120, right: "8%", top: "6%" }} />
-          <span className="orb" style={{ width: 70, height: 70, right: "22%", bottom: "14%" }} />
+          <span className="orb" style={{ width: 420, height: 420, left: "-10%", top: "4%" }} />
+          <span className="orb" style={{ width: 260, height: 260, right: "2%", top: "-6%" }} />
+          <span className="orb" style={{ width: 180, height: 180, right: "26%", bottom: "6%" }} />
         </div>
         <div className="ln-secHead">
-          <p className="ln-tag">рецепт</p>
-          <h2 className="ln-h2">Четыре шага, пока не остыл кофе</h2>
+          <p className="ln-tag">как это работает</p>
+          <h2 className="ln-h2">Четыре шага и ни одного пароля</h2>
           <p className="ln-hint">Без регистрации и подписок. Оплата в самом конце, когда сайт уже перед глазами.</p>
         </div>
         <div className="ln-steps">
           {[
-            ["I", "Расскажите о деле", "Название, чем занимаетесь, город и номер WhatsApp. Пары предложений достаточно."],
-            ["II", "Смотрите готовый сайт", "Тексты, цвета, шрифты и вёрстка подбираются под ваш бизнес. Не понравилось — «Перемешать вид»."],
-            ["III", "Платите, если забираете", `${PAY.kzt} ₸ через Kaspi. Пока не оплатили — на странице водяной знак.`],
-            ["IV", "Выкладываете в интернет", "Скачиваете файл и получаете ссылку за полминуты. Инструкция внутри."],
+            ["01", "Расскажите о деле", "Название, чем занимаетесь, город и номер WhatsApp. Пары предложений достаточно."],
+            ["02", "Смотрите готовый сайт", "Тексты, цвета, шрифты и вёрстка подбираются под ваш бизнес. Не понравилось — «Перемешать вид»."],
+            ["03", "Платите, если забираете", `${PAY.kzt} ₸ через Kaspi. Пока не оплатили — на странице водяной знак.`],
+            ["04", "Выкладываете в интернет", "Скачиваете файл и получаете ссылку за полминуты. Инструкция внутри."],
           ].map(([n, t, p]) => (
             <div className="ln-step" key={n}><i>{n}</i><h3>{t}</h3><p>{p}</p></div>
           ))}
@@ -476,8 +482,8 @@ export default function App() {
         <div>
           {[0, 1].map((k) => (
             <span key={k}>
-              свежесваренные сайты <em>·</em> без подписок <em>·</em> кнопка WhatsApp внутри <em>·</em>
-              двух одинаковых не бывает <em>·</em> оплата в конце <em>·</em> файл ваш навсегда <em>·</em>
+              тексты пишет ИИ <em>◦</em> палитра под ваше дело <em>◦</em> кнопка WhatsApp внутри <em>◦</em>
+              двух одинаковых не бывает <em>◦</em> оплата в конце <em>◦</em> файл ваш навсегда <em>◦</em>
             </span>
           ))}
         </div>
@@ -485,7 +491,7 @@ export default function App() {
 
       <section className="ln-sec rev" id="tool">
         <div className="ln-secHead">
-          <p className="ln-tag">за стойкой</p>
+          <p className="ln-tag">конструктор</p>
           <h2 className="ln-h2">Попробуйте прямо здесь</h2>
           <p className="ln-hint">Слева — данные о бизнесе. Справа — то, что увидят ваши клиенты.</p>
         </div>
@@ -561,7 +567,7 @@ export default function App() {
                 <div className="p-price">{hold ? hold.amount : PAY.kzt} ₸<small>≈ ${PAY.usd}</small></div>
                 {hold ? (
                   <p className="p-note" style={{ margin: "8px 0 0" }}>
-                    Сумма для вас <b style={{ color: "var(--crema)" }}>{hold.amount} ₸</b> — впишите её в Kaspi
+                    Сумма для вас <b style={{ color: "var(--sun)" }}>{hold.amount} ₸</b> — впишите её в Kaspi
                     до последней цифры. По этой сумме ваш платёж и найдут: у каждого заказа она своя.
                   </p>
                 ) : (
@@ -651,14 +657,14 @@ export default function App() {
 
       <section className="ln-sec rev" id="price">
         <div className="orbs" aria-hidden="true">
-          <span className="orb" style={{ width: 300, height: 300, right: "-8%", top: "-10%" }} />
-          <span className="orb" style={{ width: 90, height: 90, left: "12%", bottom: "8%" }} />
-          <span className="orb" style={{ width: 46, height: 46, left: "34%", top: "18%" }} />
-          <span className="orb" style={{ width: 160, height: 160, left: "-4%", top: "40%" }} />
+          <span className="orb" style={{ width: 460, height: 460, right: "-12%", top: "-14%" }} />
+          <span className="orb" style={{ width: 220, height: 220, left: "6%", bottom: "2%" }} />
+          <span className="orb" style={{ width: 150, height: 150, left: "38%", top: "12%" }} />
+          <span className="orb" style={{ width: 300, height: 300, left: "-6%", top: "44%" }} />
         </div>
         <div className="ln-secHead">
-          <p className="ln-tag">меню</p>
-          <h2 className="ln-h2">Одна чашка — один сайт</h2>
+          <p className="ln-tag">цена</p>
+          <h2 className="ln-h2">Один платёж, дальше сайт ваш</h2>
         </div>
         <div className="ln-priceRow">
           <div className="ln-big">{PAY.kzt} ₸<small>один платёж через Kaspi · без подписки</small></div>
