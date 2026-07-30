@@ -86,7 +86,7 @@ function Admin({ onExit }) {
     if (!auth) return;
     const id = setInterval(async () => {
       try { const d = await adminCall(auth, "list"); setRows(d.rows || []); setCfg(d.settings); } catch (e) {}
-    }, 10000);
+    }, 30000);
     return () => clearInterval(id);
   }, [auth]);
 

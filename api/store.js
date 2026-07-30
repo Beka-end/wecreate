@@ -1,14 +1,29 @@
 // Vercel Serverless Function — /api/store
 // Данные лежат в Upstash Redis (бесплатный тариф), обращение по REST — без зависимостей.
 
-const URL_ =
-  process.env.KV_REST_API_URL ||
-  process.env.UPSTASH_REDIS_REST_URL ||
-  process.env.REDIS_REST_URL;
-const TOKEN =
-  process.env.KV_REST_API_TOKEN ||
-  process.env.UPSTASH_REDIS_REST_TOKEN ||
-  process.env.REDIS_REST_TOKEN;
+/* Vercel и Upstash называют переменные по-разному, поэтому ищем сами:
+   подходит любая пара, где адрес начинается на https:// и есть токен. */
+function findCreds() {
+  const e = process.env;
+  const known = [
+    ["KV_REST_API_URL", "KV_REST_API_TOKEN"],
+    ["UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_TOKEN"],
+    ["REDIS_REST_URL", "REDIS_REST_TOKEN"],
+  ];
+  for (const [u, t] of known) {
+    if (e[u] && e[t] && String(e[u]).startsWith("https://")) return { url: e[u], token: e[t] };
+  }
+  // ищем по шаблону: SOMETHING_REST_URL + SOMETHING_REST_TOKEN
+  for (const k of Object.keys(e)) {
+    if (/REST_URL$/.test(k) && String(e[k]).startsWith("https://")) {
+      const t = k.replace(/URL$/, "TOKEN");
+      if (e[t]) return { url: e[k], token: e[t] };
+    }
+  }
+  return { url: null, token: null };
+}
+
+const { url: URL_, token: TOKEN } = findCreds();
 
 const PRICE = Number(process.env.PRICE_KZT || 2500);
 const ALPHABET = "ACDEFGHJKLMNPQRTUVWXY3479";
@@ -42,9 +57,37 @@ async function kvSet(key, value) {
 }
 
 export default async function handler(req, res) {
+  /* Диагностика: откройте /api/store в браузере.
+     Показываем только ИМЕНА переменных, значения не раскрываем. */
+  if (req.method === "GET") {
+    const names = Object.keys(process.env)
+      .filter((k) => /REDIS|KV_|UPSTASH/i.test(k))
+      .sort();
+    let ping = "не проверялось";
+    if (URL_ && TOKEN) {
+      try {
+        const r = await fetch(`${URL_}/ping`, { headers: { Authorization: `Bearer ${TOKEN}` } });
+        ping = r.ok ? "база отвечает" : `база ответила ${r.status}`;
+      } catch (e) {
+        ping = "нет связи с базой";
+      }
+    }
+    return res.status(200).json({
+      хранилище_найдено: !!(URL_ && TOKEN),
+      адрес_начинается_с_https: URL_ ? String(URL_).startsWith("https://") : false,
+      проверка_связи: ping,
+      ключ_anthropic_задан: !!process.env.ANTHROPIC_API_KEY,
+      pin_задан: !!process.env.ADMIN_PIN,
+      найденные_имена_переменных: names,
+      подсказка:
+        "Нужна пара переменных с REST-адресом (https://...) и токеном. " +
+        "REDIS_URL вида redis://... не подходит — возьмите REST-данные в консоли Upstash, раздел REST API.",
+    });
+  }
+
   if (req.method !== "POST") return res.status(405).json({ error: "Только POST" });
   if (!URL_ || !TOKEN)
-    return res.status(500).json({ error: "Не подключено хранилище: добавьте Upstash Redis в проект" });
+    return res.status(500).json({ error: "Хранилище не подключено. Откройте /api/store в браузере — там написано, чего не хватает" });
 
   const body = typeof req.body === "string" ? JSON.parse(req.body || "{}") : req.body || {};
   const action = String(body.action || "");
