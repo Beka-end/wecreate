@@ -98,24 +98,43 @@ export default async function handler(req, res) {
     const save = () => kvSet("rows", rows.slice(0, 800));
 
     /* ── Клиент ─────────────────────────────────────────── */
+    /* ── Бронь уникальной суммы ─────────────────────────── */
+    if (action === "reserve") {
+      const TWO_HOURS = 2 * 60 * 60 * 1000;
+      const live = rows.filter(
+        (r) => r.status !== "used" && !(r.status === "reserved" && Date.now() - (r.ts || 0) > TWO_HOURS)
+      );
+      const taken = new Set(live.map((r) => r.amount));
+      const free = [];
+      for (let i = 1; i <= 99; i++) if (!taken.has(PRICE + i)) free.push(PRICE + i);
+      if (!free.length) return res.status(503).json({ error: "Слишком много заказов сразу, попробуйте через час" });
+
+      const amount = free[Math.floor(Math.random() * free.length)];
+      const row = { code: makeCode(), amount, at: now(), ts: Date.now(), status: "reserved" };
+      // выкидываем просроченные брони, чтобы список не пух
+      const kept = rows.filter(
+        (r) => !(r.status === "reserved" && Date.now() - (r.ts || 0) > TWO_HOURS)
+      );
+      kept.unshift(row);
+      rows.length = 0;
+      rows.push(...kept);
+      await save();
+      return res.status(200).json({ code: row.code, amount: row.amount, status: row.status });
+    }
+
     if (action === "create") {
       const sender = String(body.sender || "").trim().replace(/\s+/g, " ").slice(0, 60);
-      const receipt = String(body.receipt || "").replace(/\D/g, "").slice(0, 20);
-      const amount = Number(String(body.amount || "").replace(/\D/g, ""));
-      if (sender.length < 3) return res.status(400).json({ error: "Впишите имя отправителя как в Kaspi" });
-      if (!amount) return res.status(400).json({ error: "Укажите сумму" });
+      const code = String(body.code || "").trim().toUpperCase();
+      if (sender.length < 3) return res.status(400).json({ error: "Впишите имя, с которого платили" });
+      if (!/[a-zA-Zа-яА-ЯёЁ]{2}/.test(sender)) return res.status(400).json({ error: "Имя выглядит неправдоподобно" });
+      const row = rows.find((r) => r.code === code);
+      if (!row) return res.status(404).json({ error: "Бронь не найдена, соберите сайт заново" });
+      if (row.status === "used") return res.status(409).json({ error: "По этому платежу сайт уже забрали" });
+      if (row.status === "issued") return res.status(200).json({ code: row.code, status: row.status });
 
-      const key = sender.toLowerCase() + "|" + amount;
-      const found = rows.find((r) => r.key === key);
-      if (found) {
-        if (found.status === "used") return res.status(409).json({ error: "По этому платежу сайт уже забрали" });
-        return res.status(200).json({ code: found.code, status: found.status });
-      }
-      const row = {
-        code: makeCode(), key, sender, receipt, amount,
-        at: now(), status: cfg.auto ? "issued" : "pending",
-      };
-      rows.unshift(row);
+      row.sender = sender;
+      row.status = cfg.auto ? "issued" : "pending";
+      row.at = now();
       await save();
       return res.status(200).json({ code: row.code, status: row.status });
     }
@@ -159,7 +178,12 @@ export default async function handler(req, res) {
         cfg.auto = !!body.auto;
         await kvSet("settings", cfg);
       }
-      return res.status(200).json({ rows, settings: cfg, price: PRICE });
+      return res.status(200).json({
+        rows: rows.filter((r) => r.status !== "reserved"),
+        reserved: rows.filter((r) => r.status === "reserved").length,
+        settings: cfg,
+        price: PRICE,
+      });
     }
 
     return res.status(400).json({ error: "Неизвестное действие" });

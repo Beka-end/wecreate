@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { CSS, Hero3D } from "./ui.jsx";
-import { askAI, createRequest, checkStatus, redeem, adminCall } from "./api.js";
+import { askAI, reserveAmount, createRequest, checkStatus, redeem, adminCall } from "./api.js";
 import {
   PALETTES, FONTS, HEROES, BLOCKS, PROOFS, MOTIFS, CTAS, MOODS,
   HERO_RU, BLOCK_RU, PROOF_RU, MOTIF_RU, rollLook, buildSite,
@@ -116,7 +116,7 @@ function Admin({ onExit }) {
     <div className="p-admin">
       <h1>Кабинет</h1>
       <p className="p-note" style={{ marginTop: 0 }}>
-        Ищите в истории Kaspi перевод от этого имени на эту сумму в это время. Сумма меньше {PAY.kzt} ₸ подсвечена красным — такую отклоняйте.
+        Сверяйте два признака: сначала найдите в истории Kaspi перевод <b>ровно на указанную сумму</b>, затем проверьте, что имя отправителя совпадает. Сходится и то и другое — «выдать». Сумма меньше {PAY.kzt} ₸ подсвечена красным.
       </p>
 
       <div className="p-stats">
@@ -132,12 +132,14 @@ function Admin({ onExit }) {
 
       <p className="p-eyebrow" style={{ marginTop: 28 }}>Ждут проверки</p>
       <table className="p-table">
-        <thead><tr><th>Отправитель</th><th>Сумма</th><th>Когда</th><th>Код</th><th /></tr></thead>
+        <thead><tr><th>Сумма</th><th>Имя</th><th>Когда</th><th>Код</th><th /></tr></thead>
         <tbody>
           {pending.map((r) => (
             <tr key={r.code}>
-              <td>{r.sender || r.receipt || "—"}</td>
-              <td className={Number(r.amount) < PAY.kzt ? "p-flag" : ""}>{r.amount || "—"}</td>
+              <td className={Number(r.amount) < PAY.kzt ? "p-flag" : ""}>
+                <b style={{ fontSize: 13, color: Number(r.amount) < PAY.kzt ? "#FF4D2E" : "#C9A227" }}>{r.amount || "—"} ₸</b>
+              </td>
+              <td>{r.sender || "—"}</td>
               <td>{r.at}</td><td>{r.code}</td>
               <td style={{ whiteSpace: "nowrap" }}>
                 <button className="p-act" type="button" onClick={() => op("set", { code: r.code, status: "issued" })}>выдать</button>{" "}
@@ -151,11 +153,11 @@ function Admin({ onExit }) {
 
       <p className="p-eyebrow" style={{ marginTop: 30 }}>История</p>
       <table className="p-table">
-        <thead><tr><th>Код</th><th>Отправитель</th><th>Сумма</th><th>Статус</th><th /></tr></thead>
+        <thead><tr><th>Код</th><th>Имя</th><th>Сумма</th><th>Статус</th><th /></tr></thead>
         <tbody>
           {done.slice(0, 30).map((r) => (
             <tr key={r.code} className={r.status === "used" ? "p-used" : ""}>
-              <td>{r.code}</td><td>{r.sender || r.receipt || "—"}</td>
+              <td>{r.code}</td><td>{r.sender || "—"}</td>
               <td className={Number(r.amount) < PAY.kzt ? "p-flag" : ""}>{r.amount || "—"}</td>
               <td>{r.status === "used" ? "забрал сайт" : "код выдан"}</td>
               <td><button className="p-exit" type="button" onClick={() => op("remove", { code: r.code })}>удалить</button></td>
@@ -190,8 +192,7 @@ export default function App() {
   const [device, setDevice] = useState("desktop");
 
   const [sender, setSender] = useState("");
-  const [receipt, setReceipt] = useState("");
-  const [amount, setAmount] = useState(String(PAY.kzt));
+  const [hold, setHold] = useState(null);   // бронь: {code, amount}
   const [req, setReq] = useState(null);
   const [paid, setPaid] = useState(false);
   const [code, setCode] = useState("");
@@ -258,6 +259,7 @@ export default function App() {
       setData({ ...parsed, phone: parsed.phone || form.phone });
       setSerial("№ " + Date.now().toString().slice(-6));
       setStage(2);
+      try { setHold(await reserveAmount()); } catch (e) { setHold(null); }
     } catch (e) {
       setStage(-1);
       setErr("Не получилось собрать страницу: " + e.message);
@@ -266,10 +268,11 @@ export default function App() {
 
   async function sendRequest() {
     setErr("");
+    if (!hold) { setErr("Бронь суммы не создана — соберите сайт заново."); return; }
+    if (sender.trim().length < 3) { setErr("Впишите имя, с которого платили."); return; }
     try {
-      const r = await createRequest({ sender, amount, receipt });
-      const row = { code: r.code, sender, status: r.status };
-      setReq(row);
+      const r = await createRequest({ sender, code: hold.code });
+      setReq({ code: r.code, sender, amount: hold.amount, status: r.status });
       if (r.status === "issued") { await redeem(r.code); setPaid(true); setStage(3); }
     } catch (e) { setErr(e.message); }
   }
@@ -417,36 +420,39 @@ export default function App() {
             {!paid && data && (
               <div className="p-gate">
                 <p className="p-eyebrow">Забрать без водяного знака</p>
-                <div className="p-price">{PAY.kzt} ₸<small>≈ ${PAY.usd}</small></div>
+                <div className="p-price">{hold ? hold.amount : PAY.kzt} ₸<small>≈ ${PAY.usd}</small></div>
+                {hold ? (
+                  <p className="p-note" style={{ margin: "8px 0 0" }}>
+                    Сумма для вас <b style={{ color: "#C9A227" }}>{hold.amount} ₸</b> — впишите её в Kaspi
+                    до последней цифры. По этой сумме ваш платёж и найдут: у каждого заказа она своя.
+                  </p>
+                ) : (
+                  <p className="p-note" style={{ margin: "8px 0 0" }}>Готовим сумму для оплаты…</p>
+                )}
                 <a className="p-kaspi" href={PAY.link} target="_blank" rel="noreferrer">Оплатить через Kaspi</a>
-                <p className="p-note" style={{ marginTop: 10 }}>
-                  Впишите в Kaspi ровно {PAY.kzt} ₸, а ниже — имя, с которого платили. По нему платёж и найдут.
-                </p>
 
                 {!req ? (
                   <div className="p-queue">
-                    <input className="p-input" placeholder="Имя отправителя, как в Kaspi" value={sender}
+                    <input className="p-input" placeholder="Имя и буква фамилии, как в Kaspi: Айдар К." value={sender}
                       onChange={(e) => setSender(e.target.value)} aria-label="Имя отправителя" />
-                    <div className="p-row" style={{ marginTop: 0 }}>
-                      <input className="p-input" placeholder="Сумма" value={amount} inputMode="numeric"
-                        onChange={(e) => setAmount(e.target.value)} aria-label="Сумма" />
-                      <input className="p-input" placeholder="Чек (если есть)" value={receipt} inputMode="numeric"
-                        onChange={(e) => setReceipt(e.target.value)} aria-label="Номер чека" />
-                    </div>
-                    <button className="p-mini" style={{ padding: "12px 0" }} type="button" onClick={sendRequest}>
-                      Отправить на проверку
+                    <button className="p-mini" style={{ padding: "12px 0" }} type="button" onClick={sendRequest} disabled={!hold}>
+                      Я оплатил — на проверку
                     </button>
                   </div>
                 ) : (
                   <div className="p-wait">
                     <b>оплата на проверке</b>
-                    Заявка принята на имя {req.sender}. Ваш код: {req.code}. Как только платёж сверят,
-                    доступ откроется сам — страницу можно не закрывать.
+                    Принято: <b>{req.amount} ₸</b> от {req.sender}. Сверят сумму и имя — и доступ
+                    откроется сам, страницу можно не закрывать.
+                    <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(201,162,39,.3)" }}>
+                      Номер заказа <b style={{ fontFamily: "'JetBrains Mono',monospace" }}>{req.code}</b> — запишите
+                      на случай, если закроете страницу. Он заработает как код доступа после подтверждения оплаты.
+                    </div>
                   </div>
                 )}
 
                 <div className="p-row">
-                  <input className="p-input" placeholder="Или введите готовый код" value={code}
+                  <input className="p-input" placeholder="Номер заказа или код доступа" value={code}
                     onChange={(e) => setCode(e.target.value)} aria-label="Код доступа" />
                   <button className="p-mini" type="button" onClick={activate}>Открыть</button>
                 </div>
