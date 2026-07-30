@@ -699,6 +699,21 @@ ${JSON.stringify(state)}
 
   async function generate() {
     setErr(""); setData(null); setStage(0);
+
+    /* Каждая новая сборка — отдельный заказ.
+       Иначе оплата прошлого сайта переносится на новый, и оплатить его уже нельзя. */
+    setPaid(false);
+    setReq(null);
+    setMyCode("");
+    setHold(null);
+    setLive("");
+    setSlug("");
+    setPubMsg("");
+    setShowCode(true);
+    setChat([]);
+    setCode("");
+    setSender("");
+
     const brief_ = `Вот всё, что рассказал владелец. Разбери это сам: вытащи название, город, адрес, телефон,
 услуги с ценами и часы работы, ничего не выдумывая сверх сказанного.
 
@@ -1126,6 +1141,10 @@ ${brief_}
 
             {paid && (
               <div className="p-saved">
+                <p className="p-note" style={{ margin: "0 0 10px" }}>
+                  Правки текстов и вида применяются к этому же сайту бесплатно. Кнопка «Собрать заново»
+                  создаёт другой сайт — это будет новый заказ.
+                </p>
                 <p className="p-ok">✓ оплачено · сайт ваш</p>
                 {myCode && (showCode ? (
                   <div className="p-codeBox">
@@ -1183,7 +1202,13 @@ ${brief_}
                     </p>
                   </>
                 ) : (
-                  <p>{pubBusy ? "Публикуем…" : "Готовим ссылку…"}</p>
+                  <>
+                    <p>{pubBusy ? "Публикуем…" : "Ссылка ещё не создана."}</p>
+                    {!pubBusy && (
+                      <button className="p-mini" style={{ padding: "12px 20px", marginTop: 10 }}
+                        type="button" onClick={() => publish()}>Опубликовать сайт</button>
+                    )}
+                  </>
                 )}
                 {pubMsg && <p className="p-note" style={{ color: "var(--coral)" }}>{pubMsg}</p>}
               </div>
