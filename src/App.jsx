@@ -177,6 +177,17 @@ const CSS2 = `
 .ln-inside h3{font-family:'Playfair Display',serif;font-weight:600;font-size:19px;margin:0 0 8px;color:var(--abyss)}
 .ln-inside p{margin:0;color:var(--dim);font-size:14.5px;line-height:1.6}
 
+/* переключатель режимов и разбор */
+.p-modes{display:flex;gap:8px;margin-bottom:18px}
+.p-mode{flex:1;border:1px solid var(--line);background:var(--shell);color:var(--dim);padding:11px 4px;
+  border-radius:100px;cursor:pointer;font-size:13px;font-weight:600;transition:all .15s}
+.p-mode[data-on="1"]{background:var(--lagoon);color:#fff;border-color:var(--lagoon)}
+.p-parsed{margin-top:20px;border:1px solid var(--line);border-radius:24px;padding:18px;background:var(--shell)}
+.p-parsedRow{display:flex;justify-content:space-between;gap:12px;padding:7px 0;font-size:13px}
+.p-parsedRow span{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:10px;font-weight:700;
+  padding-top:3px}
+.p-parsedRow b{text-align:right;color:var(--ink);font-weight:600}
+
 /* возврат по заказу */
 .p-return{border:1px dashed var(--line2);border-radius:20px;padding:14px 16px;margin-bottom:20px;background:var(--shell)}
 .p-return>span{font-size:12.5px;color:var(--dim);font-weight:600}
@@ -350,6 +361,11 @@ export default function App() {
   const [err, setErr] = useState("");
   const [device, setDevice] = useState("desktop");
   const [lang, setLang] = useState("ru");
+  const [mode, setMode] = useState("free");
+  const [brief, setBrief] = useState(
+    "Барбершоп «Пила» в Алматы на Абая 15. Мужские стрижки без записи, три мастера, бритьё опасной бритвой. " +
+    "Стрижка 5000, бритьё 4000, борода 3000. Работаем пн-пт с 10 до 21, выходные с 11 до 19. WhatsApp +7 700 000 00 00."
+  );
   const [photos, setPhotos] = useState([]);
   const [editing, setEditing] = useState(false);
   const [myCode, setMyCode] = useState("");
@@ -493,15 +509,23 @@ export default function App() {
 
   async function generate() {
     setErr(""); setData(null); setStage(0);
-    const prompt = `Ты копирайтер и арт-директор для сайтов малого бизнеса.
+    const brief_ = mode === "free"
+      ? `Вот всё, что рассказал владелец. Разбери это сам: вытащи название, город, адрес, телефон,
+услуги с ценами и часы работы, ничего не выдумывая сверх сказанного.
 
-Бизнес: ${form.name}
+«${brief}»`
+      : "";
+
+    const prompt = `Ты копирайтер и арт-директор для сайтов малого бизнеса.
+${brief_}
+
+${mode === "fields" ? `Бизнес: ${form.name}
 Описание: ${form.about}
 Город: ${form.city}
-Телефон: ${form.phone}
+Телефон: ${form.phone}` : ""}
 Язык всех текстов: ${lang === "kk" ? "казахский" : "русский"}
-${parsePairs(form.priceList).length ? "Услуги и цены (взять дословно, ничего не менять и не добавлять):\n" + parsePairs(form.priceList).map((x) => `- ${x.left}${x.right ? " — " + x.right : ""}`).join("\n") : ""}
-${parsePairs(form.hoursText).length ? "Часы работы (взять дословно):\n" + parsePairs(form.hoursText).map((x) => `- ${x.left} ${x.right}`).join("\n") : ""}
+${mode === "fields" && parsePairs(form.priceList).length ? "Услуги и цены (взять дословно, ничего не менять и не добавлять):\n" + parsePairs(form.priceList).map((x) => `- ${x.left}${x.right ? " — " + x.right : ""}`).join("\n") : ""}
+${mode === "fields" && parsePairs(form.hoursText).length ? "Часы работы (взять дословно):\n" + parsePairs(form.hoursText).map((x) => `- ${x.left} ${x.right}`).join("\n") : ""}
 
 Верни ТОЛЬКО JSON без markdown. Поле mood — одно из: тёмный, светлый, премиум, дерзкий, природный, технологичный.
 В stats дай три правдоподобных показателя: короткое значение и подпись. Не выдумывай награды и премии.
@@ -513,10 +537,26 @@ ${parsePairs(form.hoursText).length ? "Часы работы (взять дос�
       setStage(1);
       const m = MOODS[parsed.mood] ? parsed.mood : "светлый";
       setMood(m); setLook(freshLook(m));
-      /* свои цены и часы всегда сильнее того, что придумала модель */
-      const myServices = parsePairs(form.priceList);
-      const myHours = parsePairs(form.hoursText);
       const merged = { ...parsed, phone: parsed.phone || form.phone, city: parsed.city || form.city };
+
+      /* свободный ввод: показываем в полях то, что распозналось, — можно проверить и поправить */
+      if (mode === "free") {
+        setForm((f) => ({
+          ...f,
+          name: parsed.businessName || f.name,
+          about: brief.slice(0, 400),
+          city: parsed.city || f.city,
+          phone: parsed.phone || f.phone,
+          priceList: (parsed.services || [])
+            .map((x) => (x.price ? `${x.title} — ${x.price}` : x.title))
+            .join("\n"),
+          hoursText: (parsed.hours || []).map((h) => `${h.days} — ${h.time}`).join("\n"),
+        }));
+      }
+
+      /* режим полей: свои цены и часы всегда сильнее того, что придумала модель */
+      const myServices = mode === "fields" ? parsePairs(form.priceList) : [];
+      const myHours = mode === "fields" ? parsePairs(form.hoursText) : [];
       if (myServices.length) {
         merged.services = myServices.map((x, i) => ({
           title: x.left,
@@ -667,6 +707,27 @@ ${parsePairs(form.hoursText).length ? "Часы работы (взять дос�
         <div className="p-grid">
           <div className="p-panel">
             <p className="p-eyebrow">Данные бизнеса</p>
+
+            <div className="p-modes">
+              {[["free", "Одним текстом"], ["fields", "По полям"]].map(([k, t]) => (
+                <button key={k} className="p-mode" type="button" data-on={mode === k ? "1" : "0"}
+                  onClick={() => setMode(k)}>{t}</button>
+              ))}
+            </div>
+
+            {mode === "free" ? (
+              <div className="p-field">
+                <label className="p-label" htmlFor="br">Расскажите о деле как есть</label>
+                <textarea id="br" className="p-area" style={{ minHeight: 150 }} value={brief}
+                  onChange={(e) => setBrief(e.target.value)}
+                  placeholder="Что за бизнес, где, что делаете, цены, часы работы, номер WhatsApp — своими словами, одним куском." />
+                <p className="p-note" style={{ marginTop: 6 }}>
+                  Разберу сам: вытащу название, город, телефон, услуги с ценами и часы. После сборки всё
+                  это появится в полях — проверите и поправите.
+                </p>
+              </div>
+            ) : (
+            <>
             <div className="p-field">
               <label className="p-label" htmlFor="n">Название</label>
               <input id="n" className="p-input" value={form.name} onChange={set("name")} />
@@ -707,6 +768,8 @@ ${parsePairs(form.hoursText).length ? "Часы работы (взять дос�
               <textarea id="hr" className="p-area" style={{ minHeight: 68 }} value={form.hoursText}
                 onChange={set("hoursText")} placeholder={"Пн–Пт — 10:00–21:00\nСб–Вс — 11:00–19:00"} />
             </div>
+            </>
+            )}
 
             <div className="p-field">
               <span className="p-label">Язык сайта</span>
@@ -744,6 +807,19 @@ ${parsePairs(form.hoursText).length ? "Часы работы (взять дос�
             <button className="p-go" type="button" onClick={generate} disabled={busy}>
               {busy ? "Собираем…" : data ? "Собрать заново" : "Собрать сайт бесплатно"}
             </button>
+
+            {data && mode === "free" && (
+              <div className="p-parsed">
+                <p className="p-eyebrow" style={{ margin: "0 0 10px" }}>что распозналось</p>
+                <div className="p-parsedRow"><span>название</span><b>{form.name}</b></div>
+                <div className="p-parsedRow"><span>город</span><b>{form.city}</b></div>
+                <div className="p-parsedRow"><span>телефон</span><b>{form.phone}</b></div>
+                <div className="p-parsedRow"><span>услуг</span><b>{(data.services || []).length}</b></div>
+                <div className="p-parsedRow"><span>часы</span><b>{(data.hours || []).length ? "есть" : "нет"}</b></div>
+                <button className="p-mini" style={{ width: "100%", padding: "10px 0", marginTop: 12 }}
+                  type="button" onClick={() => setMode("fields")}>Открыть поля и поправить</button>
+              </div>
+            )}
 
             {data && (
               <div className="p-look">
