@@ -238,6 +238,45 @@ export function Hero3D() {
       bubbles.push(g);
     }
 
+    /* ядро: каркасная сфера с пульсирующим свечением */
+    const core = new THREE.Group();
+    const wire = new THREE.Mesh(
+      new THREE.IcosahedronGeometry(2.6, 1),
+      new THREE.MeshBasicMaterial({ color: 0x8f7dff, wireframe: true, transparent: true, opacity: 0.22 })
+    );
+    core.add(wire);
+    const inner = new THREE.Mesh(
+      new THREE.IcosahedronGeometry(1.5, 2),
+      new THREE.MeshBasicMaterial({ color: 0x12cfb0, transparent: true, opacity: 0.1, blending: THREE.AdditiveBlending })
+    );
+    core.add(inner);
+    core.position.set(0, 0, -4);
+    world.add(core);
+
+    /* гало вместо постобработки: спрайты с мягким градиентом */
+    function haloTexture(hex) {
+      const c = document.createElement("canvas");
+      c.width = c.height = 128;
+      const g = c.getContext("2d").createRadialGradient(64, 64, 0, 64, 64, 64);
+      g.addColorStop(0, hex + "cc");
+      g.addColorStop(0.35, hex + "44");
+      g.addColorStop(1, hex + "00");
+      const x = c.getContext("2d");
+      x.fillStyle = g;
+      x.fillRect(0, 0, 128, 128);
+      return new THREE.CanvasTexture(c);
+    }
+    [["#6c5ce7", -8, 3, -6, 16], ["#12cfb0", 8, -4, -5, 13], ["#ffb37a", 0, 7, -9, 10]].forEach(
+      ([hex, x, y, z, sc]) => {
+        const sp = new THREE.Sprite(
+          new THREE.SpriteMaterial({ map: haloTexture(hex), blending: THREE.AdditiveBlending, transparent: true, depthWrite: false })
+        );
+        sp.position.set(x, y, z);
+        sp.scale.setScalar(sc);
+        scene.add(sp);
+      }
+    );
+
     /* мелкая взвесь на фоне */
     const dustGeo = new THREE.BufferGeometry();
     const pts = [];
@@ -284,6 +323,11 @@ export function Hero3D() {
 
       dust.rotation.y = t * 0.012;
       world.rotation.y = Math.sin(t * 0.06) * 0.12;
+      core.rotation.y = t * 0.13;
+      core.rotation.x = Math.sin(t * 0.2) * 0.25;
+      const pulse = 1 + Math.sin(t * 1.1) * 0.05;
+      core.scale.setScalar(pulse);
+      wire.material.opacity = 0.16 + Math.sin(t * 1.4) * 0.07;
 
       camera.position.x += (mx * 2.2 - camera.position.x) * 0.03;
       camera.position.y += (-my * 1.4 - camera.position.y) * 0.03;

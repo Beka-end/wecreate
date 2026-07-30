@@ -93,6 +93,9 @@ const CSS2 = `
   background:var(--surface)}
 .ln-bar i{width:10px;height:10px;border-radius:50%;background:#2A2A34;display:block}
 .ln-bar span{margin-left:12px;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--faint)}
+.ln-status{margin-left:auto!important;display:flex;align-items:center;gap:8px;letter-spacing:.14em;text-transform:uppercase}
+.ln-status .ln-dot{width:6px;height:6px;border-radius:50%;background:var(--a2);box-shadow:0 0 10px var(--a2);
+  animation:pulse 2s ease-in-out infinite}
 
 /* ── Цена ──────────────────────────────────────────────────────── */
 .ln-priceRow{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center}
@@ -132,6 +135,44 @@ const CSS2 = `
              0 -40px 120px rgba(108,92,231,.16);
   transform-style:preserve-3d;transition:transform .5s cubic-bezier(.2,.8,.2,1);will-change:transform}
 .ln-sec{position:relative}
+
+/* ── HUD и футуристика ─────────────────────────────────────────── */
+.ln-spot{position:absolute;inset:0;z-index:2;pointer-events:none;opacity:.55;
+  background:radial-gradient(420px circle at var(--mx,50%) var(--my,40%),rgba(140,120,255,.22),transparent 62%)}
+.hud{position:absolute;inset:18px;z-index:3;pointer-events:none}
+.hud i{position:absolute;width:20px;height:20px;border:1px solid var(--line2);opacity:.7}
+.hud i:nth-child(1){top:0;left:0;border-right:0;border-bottom:0}
+.hud i:nth-child(2){top:0;right:0;border-left:0;border-bottom:0}
+.hud i:nth-child(3){bottom:0;left:0;border-right:0;border-top:0}
+.hud i:nth-child(4){bottom:0;right:0;border-left:0;border-top:0}
+.ln-telemetry{display:flex;gap:20px;justify-content:center;margin-top:34px;flex-wrap:wrap;
+  font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--faint)}
+.ln-telemetry b{color:var(--a2);font-weight:400}
+
+/* радужная кромка вокруг рамки */
+.ln-frame{position:relative}
+.ln-frame:before{content:"";position:absolute;inset:-1px;border-radius:inherit;padding:1px;z-index:5;
+  pointer-events:none;
+  background:conic-gradient(from 0deg,rgba(108,92,231,.9),rgba(18,207,176,.85),rgba(255,179,122,.7),rgba(108,92,231,.9));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude;opacity:.45;animation:spinBorder 12s linear infinite}
+@keyframes spinBorder{to{transform:rotate(1turn)}}
+
+/* световой блик, пробегающий по кнопке */
+.ln-cta,.ln-btn{position:relative;overflow:hidden}
+.ln-cta:after,.ln-btn:after{content:"";position:absolute;top:0;left:-60%;width:45%;height:100%;
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.45),transparent);
+  animation:sheen 4.5s ease-in-out infinite}
+@keyframes sheen{0%{left:-60%}45%{left:130%}100%{left:130%}}
+
+/* бегущая техно-строка */
+.ln-ticker{border-top:1px solid var(--line);border-bottom:1px solid var(--line);overflow:hidden;
+  padding:16px 0;background:linear-gradient(180deg,rgba(108,92,231,.06),transparent)}
+.ln-ticker>div{display:flex;width:max-content;animation:slide 34s linear infinite}
+.ln-ticker span{font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--faint);white-space:nowrap;padding-right:26px}
+.ln-ticker em{font-style:normal;color:var(--a2)}
+@keyframes slide{to{transform:translateX(-50%)}}
 
 /* появление при прокрутке */
 .rev{opacity:0;transform:translateY(26px);transition:opacity .8s cubic-bezier(.2,.7,.2,1),transform .8s cubic-bezier(.2,.7,.2,1)}
@@ -246,6 +287,51 @@ function Admin({ onExit }) {
 }
 
 const STAGES = ["Текст", "Вёрстка", "Готово", "Оплачено"];
+const COMBOS = PALETTES.length * FONTS.length * HEROES.length * BLOCKS.length * PROOFS.length * MOTIFS.length * CTAS.length;
+
+/* Заголовок «расшифровывается» при загрузке */
+function Decrypt({ text, delay = 0 }) {
+  const [out, setOut] = useState(text);
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const glyphs = "АБВГДЕЖЗИКЛМНОПРСТУФХЦЧШЩЭЮЯ0123456789/\\<>#*";
+    let frame = 0;
+    let raf, timer;
+    const run = () => {
+      frame += 1;
+      const shown = Math.floor(frame / 2.2);
+      setOut(
+        text.split("").map((ch, i) => {
+          if (ch === " " || i < shown) return ch;
+          return glyphs[Math.floor(Math.random() * glyphs.length)];
+        }).join("")
+      );
+      if (shown <= text.length) raf = requestAnimationFrame(run);
+      else setOut(text);
+    };
+    timer = setTimeout(() => { raf = requestAnimationFrame(run); }, delay);
+    return () => { clearTimeout(timer); cancelAnimationFrame(raf); };
+  }, [text, delay]);
+  return <>{out}</>;
+}
+
+/* Числа набегают вместо мгновенного появления */
+function CountUp({ to, suffix = "" }) {
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { setN(to); return; }
+    const t0 = performance.now(), dur = 1400;
+    let raf;
+    const step = (t) => {
+      const k = Math.min((t - t0) / dur, 1);
+      setN(Math.round(to * (1 - Math.pow(1 - k, 3))));
+      if (k < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [to]);
+  return <>{n.toLocaleString("ru-RU")}{suffix}</>;
+}
 
 /* Плавное появление секций при прокрутке */
 function useReveal() {
@@ -303,6 +389,12 @@ export default function App() {
   }
   function resetTilt() {
     if (frameRef.current) frameRef.current.style.transform = "";
+  }
+  function moveSpot(e) {
+    const t = e.currentTarget;
+    const r = t.getBoundingClientRect();
+    t.style.setProperty("--mx", `${e.clientX - r.left}px`);
+    t.style.setProperty("--my", `${e.clientY - r.top}px`);
   }
 
   useEffect(() => {
@@ -419,13 +511,19 @@ export default function App() {
         </div>
       </nav>
 
-      <header className="ln-hero">
+      <header className="ln-hero" onMouseMove={moveSpot}>
         <div className="ln-glow" />
         <Hero3D />
         <div className="ln-vignette" />
+        <div className="ln-spot" />
+        <div className="hud" aria-hidden="true"><i /><i /><i /><i /></div>
         <div className="ln-heroIn">
           <span className="ln-badge"><i className="ln-dot" />предпросмотр бесплатно</span>
-          <h1 className="ln-h1">Сайт вашему делу<br /><span>за двадцать секунд</span></h1>
+          <h1 className="ln-h1">
+            <Decrypt text="Сайт вашему делу" />
+            <br />
+            <span><Decrypt text="за двадцать секунд" delay={420} /></span>
+          </h1>
           <p className="ln-sub">
             Опишите бизнес тремя строчками. Тексты, шрифты, цвета и вёрстка подберутся сами —
             получите живую страницу с кнопкой WhatsApp. Платите только если забираете.
@@ -435,9 +533,15 @@ export default function App() {
             <a className="ln-ghost" href="#how">Как это работает →</a>
           </div>
           <div className="ln-meta">
-            <div><b>20 сек</b><span>до готовой страницы</span></div>
-            <div><b>{PAY.kzt} ₸</b><span>один раз, без подписки</span></div>
-            <div><b>500 000+</b><span>вариантов дизайна</span></div>
+            <div><b><CountUp to={20} suffix=" сек" /></b><span>до готовой страницы</span></div>
+            <div><b><CountUp to={PAY.kzt} suffix=" ₸" /></b><span>один раз, без подписки</span></div>
+            <div><b><CountUp to={COMBOS} /></b><span>вариантов дизайна</span></div>
+          </div>
+          <div className="ln-telemetry">
+            <span>ядро <b>активно</b></span>
+            <span>шрифтовых пар <b>{FONTS.length}</b></span>
+            <span>палитр <b>{PALETTES.length}</b></span>
+            <span>раскладок <b>{HEROES.length * BLOCKS.length}</b></span>
           </div>
         </div>
       </header>
@@ -465,6 +569,17 @@ export default function App() {
         </div>
       </section>
 
+      <div className="ln-ticker" aria-hidden="true">
+        <div>
+          {[0, 1].map((k) => (
+            <span key={k}>
+              тексты пишет ИИ <em>✦</em> палитра подбирается под дело <em>✦</em> кнопка WhatsApp внутри <em>✦</em>
+              дизайн не повторяется <em>✦</em> оплата в конце <em>✦</em> файл ваш навсегда <em>✦</em>
+            </span>
+          ))}
+        </div>
+      </div>
+
       <section className="ln-sec rev" id="tool">
         <div className="ln-secHead">
           <p className="ln-tag">конструктор</p>
@@ -474,7 +589,13 @@ export default function App() {
 
         <div className="ln-scene" onMouseMove={tiltFrame} onMouseLeave={resetTilt}>
         <div className="ln-frame" ref={frameRef}>
-        <div className="ln-bar"><i /><i /><i /><span>предпросмотр вашего сайта</span></div>
+        <div className="ln-bar">
+          <i /><i /><i />
+          <span>предпросмотр вашего сайта</span>
+          <span className="ln-status">
+            <b className="ln-dot" />{busy ? "сборка идёт" : data ? "готово" : "ожидание данных"}
+          </span>
+        </div>
         <div className="p-grid">
           <div className="p-panel">
             <p className="p-eyebrow">Данные бизнеса</p>
