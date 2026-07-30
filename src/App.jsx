@@ -34,13 +34,14 @@ const CSS2 = `
 /* ── Первый экран: текст над водой ─────────────────────────────── */
 .ln-hero{position:relative;min-height:min(96vh,900px);display:flex;flex-direction:column;align-items:center;
   overflow:hidden;text-align:center;padding:96px 26px 0;
-  background:linear-gradient(180deg,#FBFDFD 0%,#EAF7F6 42%,#D8F1EE 100%)}
-.ln-sunhalo{position:absolute;z-index:1;width:min(760px,110vw);aspect-ratio:1;border-radius:50%;top:-32%;
-  background:radial-gradient(circle,rgba(255,196,107,.32),rgba(255,246,226,.16) 44%,transparent 70%);
-  filter:blur(18px);pointer-events:none}
-.ln-water{position:absolute;left:0;right:0;bottom:0;height:62%;z-index:1}
-.ln-waterFade{position:absolute;left:0;right:0;bottom:0;height:64%;z-index:2;pointer-events:none;
-  background:linear-gradient(180deg,rgba(216,241,238,.9) 0%,rgba(216,241,238,0) 22%)}
+  background:linear-gradient(180deg,#FBFDFD 0%,#EEF8F8 34%,#DCF0EE 62%,#CDEAE6 100%)}
+.ln-sunhalo{position:absolute;z-index:1;width:min(900px,120vw);aspect-ratio:1;border-radius:50%;top:-18%;
+  left:50%;transform:translateX(-50%);
+  background:radial-gradient(circle,rgba(255,240,205,.55),rgba(255,225,170,.22) 34%,transparent 66%);
+  filter:blur(24px);pointer-events:none}
+.ln-water{position:absolute;left:0;right:0;bottom:0;height:72%;z-index:1}
+.ln-waterFade{position:absolute;left:0;right:0;bottom:0;height:74%;z-index:2;pointer-events:none;
+  background:linear-gradient(180deg,rgba(238,248,248,.92) 0%,rgba(238,248,248,.25) 12%,rgba(238,248,248,0) 26%)}
 .ln-heroIn{position:relative;z-index:4;max-width:880px}
 .ln-badge{display:inline-flex;align-items:center;gap:9px;border:1px solid var(--line2);border-radius:100px;
   padding:8px 18px 8px 13px;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--deep);

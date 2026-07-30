@@ -136,7 +136,7 @@ export const CSS = `
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 `;
 
-/* ─── Сцена: водная гладь лагуны ───────────────────────────────────── */
+/* ─── Сцена: лагуна с настоящим солнцем ────────────────────────────── */
 export function Hero3D() {
   const mount = useRef(null);
   useEffect(() => {
@@ -145,82 +145,191 @@ export function Hero3D() {
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     const scene = new THREE.Scene();
-    scene.fog = new THREE.Fog(0xeaf7f6, 26, 62);
+    scene.fog = new THREE.Fog(0xE9F6F3, 30, 96);
 
-    const camera = new THREE.PerspectiveCamera(42, el.clientWidth / el.clientHeight, 0.1, 200);
-    camera.position.set(0, 3.2, 15);
+    const camera = new THREE.PerspectiveCamera(40, el.clientWidth / el.clientHeight, 0.1, 400);
+    camera.position.set(0, 2.6, 16);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(el.clientWidth, el.clientHeight);
     el.appendChild(renderer.domElement);
 
-    /* полуденное солнце над лагуной */
-    scene.add(new THREE.AmbientLight(0xDFF4F2, 1.6));
-    const sun = new THREE.DirectionalLight(0xFFF6E2, 1.6);
-    sun.position.set(6, 14, 8);
-    scene.add(sun);
-    const bounce = new THREE.PointLight(0x8FE4DC, 60, 40);
-    bounce.position.set(-8, 3, 6);
-    scene.add(bounce);
+    /* ── Небо рисуем на холсте: от голубого зенита к тёплому горизонту,
+          с диском солнца. Оно же служит картой отражений для воды. ── */
+    const SUN_U = 0.5;      // солнце по центру
+    const SUN_V = 0.435;    // чуть выше линии горизонта
+    function skyTexture() {
+      const c = document.createElement("canvas");
+      c.width = 1024; c.height = 512;
+      const x = c.getContext("2d");
 
-    /* песчаное дно */
+      const g = x.createLinearGradient(0, 0, 0, 512);
+      g.addColorStop(0.00, "#4FA9D8");
+      g.addColorStop(0.28, "#87CDE8");
+      g.addColorStop(0.44, "#CDEDF3");
+      g.addColorStop(0.50, "#FFF3DC");
+      g.addColorStop(0.56, "#EAF6F2");
+      g.addColorStop(1.00, "#BFE4DC");
+      x.fillStyle = g;
+      x.fillRect(0, 0, 1024, 512);
+
+      // мягкое сияние вокруг солнца
+      const sx = SUN_U * 1024, sy = SUN_V * 512;
+      const halo = x.createRadialGradient(sx, sy, 0, sx, sy, 260);
+      halo.addColorStop(0, "rgba(255,247,224,.95)");
+      halo.addColorStop(0.16, "rgba(255,236,190,.6)");
+      halo.addColorStop(0.45, "rgba(255,228,180,.22)");
+      halo.addColorStop(1, "rgba(255,228,180,0)");
+      x.fillStyle = halo;
+      x.fillRect(0, 0, 1024, 512);
+
+      // сам диск
+      const disc = x.createRadialGradient(sx, sy, 0, sx, sy, 34);
+      disc.addColorStop(0, "#FFFFFF");
+      disc.addColorStop(0.55, "#FFF6DC");
+      disc.addColorStop(1, "rgba(255,240,200,0)");
+      x.fillStyle = disc;
+      x.beginPath();
+      x.arc(sx, sy, 34, 0, 6.283);
+      x.fill();
+
+      // редкие перистые облака
+      x.globalAlpha = 0.5;
+      for (let i = 0; i < 14; i++) {
+        const cx = Math.random() * 1024, cy = 40 + Math.random() * 150;
+        const w = 90 + Math.random() * 220, h = 8 + Math.random() * 16;
+        const cg = x.createRadialGradient(cx, cy, 0, cx, cy, w / 2);
+        cg.addColorStop(0, "rgba(255,255,255,.85)");
+        cg.addColorStop(1, "rgba(255,255,255,0)");
+        x.fillStyle = cg;
+        x.save();
+        x.translate(cx, cy);
+        x.scale(1, h / (w / 2));
+        x.beginPath();
+        x.arc(0, 0, w / 2, 0, 6.283);
+        x.fill();
+        x.restore();
+      }
+      x.globalAlpha = 1;
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.mapping = THREE.EquirectangularReflectionMapping;
+      return tex;
+    }
+    const sky = skyTexture();
+
+    /* положение солнца в мире — из тех же координат, что и на холсте */
+    const theta = (SUN_U - 0.25) * Math.PI * 2;
+    const phi = SUN_V * Math.PI;
+    const SUN = new THREE.Vector3(
+      Math.sin(phi) * Math.cos(theta),
+      Math.cos(phi),
+      Math.sin(phi) * Math.sin(theta)
+    ).multiplyScalar(120);
+
+    /* ── Свет ── */
+    scene.add(new THREE.AmbientLight(0xDCEFF4, 1.15));
+    const sunLight = new THREE.DirectionalLight(0xFFF2D8, 2.1);
+    sunLight.position.copy(SUN);
+    scene.add(sunLight);
+    const skyFill = new THREE.HemisphereLight(0xBFE6F5, 0x2E9B93, 0.9);
+    scene.add(skyFill);
+
+    /* ── Дно: песок с рябью ── */
+    const sandGeo = new THREE.PlaneGeometry(300, 300, 60, 60);
+    const sp = sandGeo.attributes.position;
+    for (let i = 0; i < sp.count; i++) {
+      const x = sp.getX(i), y = sp.getY(i);
+      sp.setZ(i, Math.sin(x * 0.5) * 0.06 + Math.sin(y * 0.42 + 1.3) * 0.05);
+    }
+    sandGeo.computeVertexNormals();
     const sand = new THREE.Mesh(
-      new THREE.PlaneGeometry(120, 120, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0xEBDCBE, roughness: 1, metalness: 0 })
+      sandGeo,
+      new THREE.MeshStandardMaterial({ color: 0xEADDBE, roughness: 1, metalness: 0 })
     );
     sand.rotation.x = -Math.PI / 2;
-    sand.position.y = -1.5;
+    sand.position.y = -2.1;
     scene.add(sand);
 
-    /* вода: полупрозрачная гладь с бегущими волнами */
-    const SEG = 90;
-    const waterGeo = new THREE.PlaneGeometry(120, 120, SEG, SEG);
+    /* ── Вода: отражает небо, цвет меняется с глубиной ── */
+    const SEG = 76;
+    const SIZE = 300;
+    const waterGeo = new THREE.PlaneGeometry(SIZE, SIZE, SEG, SEG);
+    const count = waterGeo.attributes.position.count;
+    waterGeo.setAttribute("color", new THREE.BufferAttribute(new Float32Array(count * 3), 3));
+
+    const shallow = new THREE.Color(0x63D9CC);
+    const mid = new THREE.Color(0x1E9FA6);
+    const deepC = new THREE.Color(0x0A5C73);
+    const tmp = new THREE.Color();
+
     const water = new THREE.Mesh(
       waterGeo,
       new THREE.MeshStandardMaterial({
-        color: 0x49CFC4, roughness: 0.12, metalness: 0.35,
-        transparent: true, opacity: 0.82, side: THREE.DoubleSide,
+        vertexColors: true,
+        envMap: sky,
+        envMapIntensity: 1.15,
+        metalness: 0.72,
+        roughness: 0.075,
+        transparent: true,
+        opacity: 0.94,
+        side: THREE.DoubleSide,
       })
     );
     water.rotation.x = -Math.PI / 2;
     scene.add(water);
 
     const base = Float32Array.from(waterGeo.attributes.position.array);
+    const pos = waterGeo.attributes.position;
+    const col = waterGeo.attributes.color;
 
-    /* блики на воде */
+    /* базовый цвет по удалённости: у берега бирюза, дальше — синева */
+    for (let i = 0; i < count; i++) {
+      const y = base[i * 3 + 1];              // до поворота это глубина по сцене
+      const k = Math.min(Math.max((-y + 20) / 90, 0), 1);
+      tmp.copy(shallow).lerp(mid, Math.min(k * 1.6, 1)).lerp(deepC, Math.max(k - 0.45, 0) * 1.7);
+      col.setXYZ(i, tmp.r, tmp.g, tmp.b);
+    }
+    col.needsUpdate = true;
+
+    /* ── Солнечная дорожка: блики выстроены от солнца к зрителю ── */
     function glintTexture() {
       const c = document.createElement("canvas");
       c.width = c.height = 128;
       const x = c.getContext("2d");
       const g = x.createRadialGradient(64, 64, 0, 64, 64, 64);
-      g.addColorStop(0, "rgba(255,255,255,.95)");
-      g.addColorStop(0.3, "rgba(255,246,226,.35)");
-      g.addColorStop(1, "rgba(255,246,226,0)");
+      g.addColorStop(0, "rgba(255,255,255,1)");
+      g.addColorStop(0.25, "rgba(255,247,222,.55)");
+      g.addColorStop(1, "rgba(255,244,214,0)");
       x.fillStyle = g;
       x.fillRect(0, 0, 128, 128);
       return new THREE.CanvasTexture(c);
     }
     const glintTex = glintTexture();
     const glints = [];
-    for (let i = 0; i < 26; i++) {
-      const sp = new THREE.Sprite(
+    for (let i = 0; i < 130; i++) {
+      const s = new THREE.Sprite(
         new THREE.SpriteMaterial({ map: glintTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })
       );
-      sp.position.set((Math.random() - 0.5) * 46, 0.12, (Math.random() - 0.5) * 34 - 6);
-      const s = 0.4 + Math.random() * 1.1;
-      sp.scale.set(s * 2.4, s * 0.5, 1);
-      sp.userData = { s, phase: Math.random() * 6.28, drift: 0.2 + Math.random() * 0.5 };
-      scene.add(sp);
-      glints.push(sp);
+      const z = -70 + Math.random() * 84;              // от горизонта к камере
+      const spread = 0.7 + Math.pow((z + 70) / 84, 2) * 11;  // дорожка расширяется вблизи
+      s.position.set((Math.random() - 0.5) * spread * 2, 0.06, z);
+      s.userData = {
+        phase: Math.random() * 6.28,
+        speed: 1.6 + Math.random() * 2.6,
+        w: 0.25 + Math.random() * 0.8 + Math.pow((z + 70) / 84, 2) * 0.7,
+      };
+      scene.add(s);
+      glints.push(s);
     }
 
-    /* лёгкая дымка над горизонтом */
+    /* дымка у горизонта */
     const haze = new THREE.Mesh(
-      new THREE.PlaneGeometry(160, 26),
-      new THREE.MeshBasicMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0.35, depthWrite: false })
+      new THREE.PlaneGeometry(420, 40),
+      new THREE.MeshBasicMaterial({ color: 0xF4FBF8, transparent: true, opacity: 0.5, depthWrite: false })
     );
-    haze.position.set(0, 6, -46);
+    haze.position.set(0, 7, -120);
     scene.add(haze);
 
     let mx = 0, my = 0, raf;
@@ -232,35 +341,41 @@ export function Hero3D() {
     el.addEventListener("pointermove", onMove);
 
     const clock = new THREE.Clock();
-    const pos = waterGeo.attributes.position;
+    const crest = new THREE.Color();
 
     const tick = () => {
-      const t = reduced ? 0.4 : clock.getElapsedTime();
+      const t = reduced ? 0.6 : clock.getElapsedTime();
 
-      for (let i = 0; i < pos.count; i++) {
+      /* четыре наложенные волны: две крупные зыби и две мелкие ряби */
+      for (let i = 0; i < count; i++) {
         const x = base[i * 3], y = base[i * 3 + 1];
         const h =
-          Math.sin(x * 0.28 + t * 0.9) * 0.18 +
-          Math.sin(y * 0.21 - t * 0.7) * 0.16 +
-          Math.sin((x + y) * 0.12 + t * 1.3) * 0.09;
+          Math.sin(x * 0.13 + t * 0.62) * 0.30 +
+          Math.sin(y * 0.10 - t * 0.48) * 0.26 +
+          Math.sin((x * 0.44 + y * 0.31) + t * 1.25) * 0.075 +
+          Math.sin((x * 0.79 - y * 0.62) - t * 1.9) * 0.035;
         pos.array[i * 3 + 2] = h;
+
+        /* гребни светлее, впадины темнее — вода перестаёт быть плоской заливкой */
+        const lift = Math.min(Math.max(h * 0.9 + 0.5, 0), 1);
+        crest.fromBufferAttribute(col, i);
+        const f = 0.9 + lift * 0.22;
+        col.setXYZ(i, Math.min(crest.r * f, 1), Math.min(crest.g * f, 1), Math.min(crest.b * f, 1));
       }
       pos.needsUpdate = true;
       waterGeo.computeVertexNormals();
 
-      glints.forEach((sp) => {
-        const u = sp.userData;
-        sp.position.x += Math.sin(t * 0.4 + u.phase) * 0.004;
-        sp.position.z -= u.drift * 0.004;
-        if (sp.position.z < -30) sp.position.z = 12;
-        const k = 0.55 + Math.sin(t * 1.6 + u.phase) * 0.45;
-        sp.material.opacity = 0.25 + k * 0.5;
-        sp.scale.set(u.s * (2.1 + k * 0.6), u.s * 0.5, 1);
+      /* блики вспыхивают вразнобой — так же, как настоящая рябь ловит солнце */
+      glints.forEach((s) => {
+        const u = s.userData;
+        const k = Math.pow(Math.abs(Math.sin(t * u.speed * 0.5 + u.phase)), 3);
+        s.material.opacity = 0.1 + k * 0.85;
+        s.scale.set(u.w * (1.1 + k * 1.5), u.w * 0.24 * (0.8 + k * 0.5), 1);
       });
 
-      camera.position.x += (mx * 2.4 - camera.position.x) * 0.03;
-      camera.position.y += (3.2 - my * 0.9 - camera.position.y) * 0.03;
-      camera.lookAt(0, 0.4, -12);
+      camera.position.x += (mx * 1.8 - camera.position.x) * 0.028;
+      camera.position.y += (2.6 - my * 0.7 - camera.position.y) * 0.028;
+      camera.lookAt(0, 1.1, -40);
 
       renderer.render(scene, camera);
       raf = requestAnimationFrame(tick);
@@ -278,6 +393,7 @@ export function Hero3D() {
       cancelAnimationFrame(raf);
       window.removeEventListener("resize", onResize);
       el.removeEventListener("pointermove", onMove);
+      sky.dispose();
       renderer.dispose();
       if (renderer.domElement.parentNode) renderer.domElement.parentNode.removeChild(renderer.domElement);
     };
