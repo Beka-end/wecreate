@@ -16,7 +16,8 @@ export async function askAI(prompt) {
   return JSON.parse(clean.slice(clean.indexOf("{"), clean.lastIndexOf("}") + 1));
 }
 
-export const createRequest = (receipt, amount) => post("/api/store", { action: "create", receipt, amount });
+export const createRequest = ({ sender, amount, receipt }) =>
+  post("/api/store", { action: "create", sender, amount, receipt });
 export const checkStatus = (code) => post("/api/store", { action: "status", code });
 export const redeem = (code) => post("/api/store", { action: "redeem", code });
 export const adminCall = (pin, op, extra = {}) => post("/api/store", { action: "admin", pin, op, ...extra });

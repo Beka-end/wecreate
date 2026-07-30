@@ -99,17 +99,22 @@ export default async function handler(req, res) {
 
     /* ── Клиент ─────────────────────────────────────────── */
     if (action === "create") {
-      const receipt = String(body.receipt || "").replace(/\D/g, "");
+      const sender = String(body.sender || "").trim().replace(/\s+/g, " ").slice(0, 60);
+      const receipt = String(body.receipt || "").replace(/\D/g, "").slice(0, 20);
       const amount = Number(String(body.amount || "").replace(/\D/g, ""));
-      if (receipt.length < 4) return res.status(400).json({ error: "Номер чека — минимум 4 цифры" });
+      if (sender.length < 3) return res.status(400).json({ error: "Впишите имя отправителя как в Kaspi" });
       if (!amount) return res.status(400).json({ error: "Укажите сумму" });
 
-      const found = rows.find((r) => r.receipt === receipt);
+      const key = sender.toLowerCase() + "|" + amount;
+      const found = rows.find((r) => r.key === key);
       if (found) {
-        if (found.status === "used") return res.status(409).json({ error: "По этому чеку сайт уже забрали" });
+        if (found.status === "used") return res.status(409).json({ error: "По этому платежу сайт уже забрали" });
         return res.status(200).json({ code: found.code, status: found.status });
       }
-      const row = { code: makeCode(), receipt, amount, at: now(), status: cfg.auto ? "issued" : "pending" };
+      const row = {
+        code: makeCode(), key, sender, receipt, amount,
+        at: now(), status: cfg.auto ? "issued" : "pending",
+      };
       rows.unshift(row);
       await save();
       return res.status(200).json({ code: row.code, status: row.status });

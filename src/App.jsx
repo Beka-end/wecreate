@@ -116,7 +116,7 @@ function Admin({ onExit }) {
     <div className="p-admin">
       <h1>Кабинет</h1>
       <p className="p-note" style={{ marginTop: 0 }}>
-        Сверяйте заявки с уведомлениями Kaspi. Сумма меньше {PAY.kzt} ₸ подсвечена красным — такую отклоняйте.
+        Ищите в истории Kaspi перевод от этого имени на эту сумму в это время. Сумма меньше {PAY.kzt} ₸ подсвечена красным — такую отклоняйте.
       </p>
 
       <div className="p-stats">
@@ -132,11 +132,11 @@ function Admin({ onExit }) {
 
       <p className="p-eyebrow" style={{ marginTop: 28 }}>Ждут проверки</p>
       <table className="p-table">
-        <thead><tr><th>Чек</th><th>Сумма</th><th>Когда</th><th>Код</th><th /></tr></thead>
+        <thead><tr><th>Отправитель</th><th>Сумма</th><th>Когда</th><th>Код</th><th /></tr></thead>
         <tbody>
           {pending.map((r) => (
             <tr key={r.code}>
-              <td>{r.receipt}</td>
+              <td>{r.sender || r.receipt || "—"}</td>
               <td className={Number(r.amount) < PAY.kzt ? "p-flag" : ""}>{r.amount || "—"}</td>
               <td>{r.at}</td><td>{r.code}</td>
               <td style={{ whiteSpace: "nowrap" }}>
@@ -151,11 +151,11 @@ function Admin({ onExit }) {
 
       <p className="p-eyebrow" style={{ marginTop: 30 }}>История</p>
       <table className="p-table">
-        <thead><tr><th>Код</th><th>Чек</th><th>Сумма</th><th>Статус</th><th /></tr></thead>
+        <thead><tr><th>Код</th><th>Отправитель</th><th>Сумма</th><th>Статус</th><th /></tr></thead>
         <tbody>
           {done.slice(0, 30).map((r) => (
             <tr key={r.code} className={r.status === "used" ? "p-used" : ""}>
-              <td>{r.code}</td><td>{r.receipt}</td>
+              <td>{r.code}</td><td>{r.sender || r.receipt || "—"}</td>
               <td className={Number(r.amount) < PAY.kzt ? "p-flag" : ""}>{r.amount || "—"}</td>
               <td>{r.status === "used" ? "забрал сайт" : "код выдан"}</td>
               <td><button className="p-exit" type="button" onClick={() => op("remove", { code: r.code })}>удалить</button></td>
@@ -189,6 +189,7 @@ export default function App() {
   const [err, setErr] = useState("");
   const [device, setDevice] = useState("desktop");
 
+  const [sender, setSender] = useState("");
   const [receipt, setReceipt] = useState("");
   const [amount, setAmount] = useState(String(PAY.kzt));
   const [req, setReq] = useState(null);
@@ -266,8 +267,8 @@ export default function App() {
   async function sendRequest() {
     setErr("");
     try {
-      const r = await createRequest(receipt, amount);
-      const row = { code: r.code, receipt: receipt.replace(/\D/g, ""), status: r.status };
+      const r = await createRequest({ sender, amount, receipt });
+      const row = { code: r.code, sender, status: r.status };
       setReq(row);
       if (r.status === "issued") { await redeem(r.code); setPaid(true); setStage(3); }
     } catch (e) { setErr(e.message); }
@@ -419,16 +420,18 @@ export default function App() {
                 <div className="p-price">{PAY.kzt} ₸<small>≈ ${PAY.usd}</small></div>
                 <a className="p-kaspi" href={PAY.link} target="_blank" rel="noreferrer">Оплатить через Kaspi</a>
                 <p className="p-note" style={{ marginTop: 10 }}>
-                  Впишите в Kaspi ровно {PAY.kzt} ₸. Если сумма меньше — заявку отклонят.
+                  Впишите в Kaspi ровно {PAY.kzt} ₸, а ниже — имя, с которого платили. По нему платёж и найдут.
                 </p>
 
                 {!req ? (
                   <div className="p-queue">
-                    <div className="p-row" style={{ marginTop: 4 }}>
-                      <input className="p-input" placeholder="Номер чека" value={receipt} inputMode="numeric"
-                        onChange={(e) => setReceipt(e.target.value)} aria-label="Номер чека" />
+                    <input className="p-input" placeholder="Имя отправителя, как в Kaspi" value={sender}
+                      onChange={(e) => setSender(e.target.value)} aria-label="Имя отправителя" />
+                    <div className="p-row" style={{ marginTop: 0 }}>
                       <input className="p-input" placeholder="Сумма" value={amount} inputMode="numeric"
-                        style={{ maxWidth: 96 }} onChange={(e) => setAmount(e.target.value)} aria-label="Сумма" />
+                        onChange={(e) => setAmount(e.target.value)} aria-label="Сумма" />
+                      <input className="p-input" placeholder="Чек (если есть)" value={receipt} inputMode="numeric"
+                        onChange={(e) => setReceipt(e.target.value)} aria-label="Номер чека" />
                     </div>
                     <button className="p-mini" style={{ padding: "12px 0" }} type="button" onClick={sendRequest}>
                       Отправить на проверку
@@ -437,7 +440,7 @@ export default function App() {
                 ) : (
                   <div className="p-wait">
                     <b>оплата на проверке</b>
-                    Заявка принята, чек № {req.receipt}. Ваш код: {req.code}. Как только платёж сверят,
+                    Заявка принята на имя {req.sender}. Ваш код: {req.code}. Как только платёж сверят,
                     доступ откроется сам — страницу можно не закрывать.
                   </div>
                 )}
