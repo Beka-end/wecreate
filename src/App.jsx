@@ -376,20 +376,35 @@ function CountUp({ to, suffix = "" }) {
 }
 
 /* Плавное появление секций при прокрутке */
-function useReveal() {
+function useReveal(dep) {
   useEffect(() => {
-    const els = document.querySelectorAll(".rev");
-    if (!("IntersectionObserver" in window)) {
-      els.forEach((e) => e.classList.add("in"));
-      return;
-    }
-    const io = new IntersectionObserver(
-      (entries) => entries.forEach((en) => { if (en.isIntersecting) { en.target.classList.add("in"); io.unobserve(en.target); } }),
-      { rootMargin: "-60px" }
-    );
-    els.forEach((e) => io.observe(e));
-    return () => io.disconnect();
-  }, []);
+    /* ждём отрисовки: после возврата из кабинета секции создаются заново */
+    const id = requestAnimationFrame(() => {
+      const els = document.querySelectorAll(".rev:not(.in)");
+      if (!els.length) return;
+      if (!("IntersectionObserver" in window)) {
+        els.forEach((e) => e.classList.add("in"));
+        return;
+      }
+      const io = new IntersectionObserver(
+        (entries) => entries.forEach((en) => {
+          if (en.isIntersecting) { en.target.classList.add("in"); io.unobserve(en.target); }
+        }),
+        { rootMargin: "-60px" }
+      );
+      els.forEach((e) => {
+        /* то, что уже в кадре, показываем сразу, не дожидаясь прокрутки */
+        const r = e.getBoundingClientRect();
+        if (r.top < window.innerHeight && r.bottom > 0) e.classList.add("in");
+        else io.observe(e);
+      });
+      useReveal._io = io;
+    });
+    return () => {
+      cancelAnimationFrame(id);
+      if (useReveal._io) { useReveal._io.disconnect(); useReveal._io = null; }
+    };
+  }, [dep]);
 }
 
 export default function App() {
@@ -435,7 +450,8 @@ export default function App() {
   const linkRef = useRef(null);
   const clicks = useRef({ n: 0, t: 0 });
   const seen = useRef(new Set());
-  useReveal();
+  const recent = useRef({ palettes: [], fonts: [] });
+  useReveal(admin);
   const frameRef = useRef(null);
 
   function tiltFrame(e) {
@@ -474,9 +490,13 @@ export default function App() {
   }, [req, paid]);
 
   function freshLook(m) {
-    const l = rollLook(m, seen.current);
+    const l = rollLook(m, seen.current, recent.current);
     seen.current.add(l.sig);
     if (seen.current.size > 400) seen.current.clear();
+
+    /* держим в памяти пять последних палитр и три пары шрифтов, чтобы они не повторялись подряд */
+    recent.current.palettes = [l.palette, ...recent.current.palettes].slice(0, 5);
+    recent.current.fonts = [l.fonts, ...recent.current.fonts].slice(0, 3);
     return l;
   }
   function tapLogo() {
@@ -710,10 +730,40 @@ ${brief_}
     } catch (e) { setErr(e.message); }
   }
 
+  /* Ввод кода: свежий — активируем, уже активированный — просто открываем свой сайт.
+     Раньше во втором случае выдавалась ошибка, хотя код принадлежит владельцу. */
   async function activate() {
     setErr("");
-    try { await redeem(code); setPaid(true); setStage(3); const c = code.trim().toUpperCase(); setMyCode(c); keep(null, null, c); }
-    catch (e) { setErr(e.message); }
+    const c = String(code).trim().toUpperCase();
+    if (!c) return;
+    let opened = false;
+    try {
+      await redeem(c);
+      opened = true;
+    } catch (e) {
+      const already = /использован/i.test(e.message);
+      if (!already) { setErr(e.message); return; }
+      opened = true; // код уже был активирован — это нормально, открываем проект
+    }
+    if (!opened) return;
+
+    setMyCode(c);
+    setPaid(true);
+    setStage(3);
+
+    /* если сайт по этому коду уже собирался — восстанавливаем его целиком */
+    try {
+      const { payload } = await loadProject(c);
+      const j = JSON.parse(payload);
+      if (j.form) setForm(j.form);
+      if (j.lang) setLang(j.lang);
+      if (j.data) setData(j.data);
+      if (j.look) setLook(j.look);
+      setSerial("заказ " + c);
+    } catch (e) {
+      keep(null, null, c);
+    }
+    publish(c);
   }
 
   function download() {
@@ -1027,7 +1077,7 @@ ${brief_}
                   ))}
                 </div>
                 <button className="p-mini" style={{ width: "100%", padding: "11px 0", marginTop: 12 }}
-                  type="button" onClick={() => setLook(freshLook(mood))}>Перемешать вид</button>
+                  type="button" onClick={() => { const l = freshLook(mood); setLook(l); keep(null, l); }}>Перемешать вид</button>
                 <p className="p-note" style={{ marginTop: 8 }}>
                   Вариантов: {PALETTES.length * FONTS.length * HEROES.length * BLOCKS.length * PROOFS.length * MOTIFS.length * CTAS.length}
                 </p>

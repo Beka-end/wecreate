@@ -49,12 +49,25 @@ export const MOODS = {
 
 export const pick = (a) => a[Math.floor(Math.random() * a.length)];
 
-export function rollLook(mood, avoid) {
+export function rollLook(mood, avoid, recent) {
   const m = MOODS[mood] || MOODS["светлый"];
+  const usedP = (recent && recent.palettes) || [];
+  const usedF = (recent && recent.fonts) || [];
+
+  /* Палитра выбирается из подходящих настроению, но недавние исключаются.
+     Если все свежие кончились — берём любую из всего набора, лишь бы не повторяться. */
+  const freshP = m.p.filter((i) => !usedP.includes(i));
+  const anyP = PALETTES.map((_, i) => i).filter((i) => !usedP.includes(i));
+  const poolP = freshP.length ? freshP : (anyP.length ? anyP : m.p);
+
+  const freshF = m.f.filter((i) => !usedF.includes(i));
+  const anyF = FONTS.map((_, i) => i).filter((i) => !usedF.includes(i));
+  const poolF = freshF.length ? freshF : (anyF.length ? anyF : m.f);
+
   let look = null;
   for (let i = 0; i < 60; i++) {
     look = {
-      palette: pick(m.p), fonts: pick(m.f),
+      palette: pick(poolP), fonts: pick(poolF),
       hero: pick(HEROES), block: pick(BLOCKS), proof: pick(PROOFS), motif: pick(MOTIFS),
       width: pick(WIDTHS), cta: pick(CTAS),
       radius: pick(["0px", "2px", "6px", "14px", "999px"]),

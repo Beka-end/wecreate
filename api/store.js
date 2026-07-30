@@ -149,6 +149,7 @@ export default async function handler(req, res) {
       if (!r) return res.status(404).json({ error: "Такого кода нет" });
       if (r.status === "used") return res.status(409).json({ error: "Код уже использован" });
       if (r.status === "pending") return res.status(402).json({ error: "Оплата ещё не подтверждена" });
+      if (r.status === "reserved") return res.status(402).json({ error: "По этому номеру оплата не поступала" });
       r.status = "used";
       r.at2 = now();
       await save();
