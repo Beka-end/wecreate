@@ -9,12 +9,19 @@ async function post(url, body) {
   return data;
 }
 
-/* Тексты сайта пишет модель на сервере — ключа в браузере нет */
-export async function askAI(prompt) {
-  const { text } = await post("/api/ai", { prompt });
+/* Модель зовёт сервер, он же собирает промпт.
+   Из браузера уходят только данные — текста запроса к модели здесь больше нет. */
+async function callAI(body) {
+  const { text } = await post("/api/ai", body);
   const clean = String(text || "").replace(/```json|```/g, "").trim();
   return JSON.parse(clean.slice(clean.indexOf("{"), clean.lastIndexOf("}") + 1));
 }
+
+/* Собрать сайт из рассказа владельца */
+export const generateSite = (brief, lang) => callAI({ action: "generate", brief, lang });
+
+/* Поправить готовый сайт словами */
+export const patchSite = (state, request) => callAI({ action: "patch", state, request });
 
 export const reserveAmount = () => post("/api/store", { action: "reserve" });
 export const createRequest = ({ sender, code }) => post("/api/store", { action: "create", sender, code });
